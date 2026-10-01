@@ -4,9 +4,19 @@ This is the **only** surface the two lanes share in code. Lane A and Lane B
 systems talk through camp state and events. They never reach into each
 other's nodes, scenes or scripts.
 
-> Status: **draft names**. Phase 0 turns these into code under `contracts/`.
-> Names may change until then. After that, changes follow `AGENTS.md` §4:
-> additions are cheap, while renames and removals need the other lane's OK.
+> Status: **in code** under `contracts/` (since 2026-10-01). Changes follow
+> `AGENTS.md` §4: additions are cheap, while renames and removals need the
+> other lane's OK.
+
+## Where the code lives
+
+| File | What |
+|------|------|
+| `contracts/events_a.gd`, `events_b.gd`, `events_shared.gd` | `const EVENTS` per lane. `EventBus` loads every `contracts/events_*.gd` and warns once on an undeclared event. |
+| `contracts/state_a.gd`, `state_b.gd` | `const KEYS` per lane (a key ending in `.` is a prefix). `CampState` warns once on an undeclared key. |
+| `contracts/records.gd` | Makers for the citizen and building records (plain Dictionaries). |
+
+To add an event or key, edit **your own lane's file** in a `shared/` PR.
 
 ## Design constraints for the code version (Phase 0)
 
@@ -89,3 +99,4 @@ Lane A changes them **only** through request events, such as
 Append-only. Format: `YYYY-MM-DD, lane, change, issue link`.
 
 - 2026-10-01, owner, initial draft.
+- 2026-10-01, A, contracts in code (`contracts/`); payload keys listed per event; added state key `citizens` (citizen records) and the shared `events_shared.gd`.
