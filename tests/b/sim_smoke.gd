@@ -110,6 +110,21 @@ func _run() -> void:
 	_check(CampState.has_value("report.last_day"), "daily report written")
 	_check(_saw(&"survivor_arrived"), "new survivors in the morning")
 
+	# Run end (placeholder O-08 rules): surviving the target day wins.
+	var ended: Array = []
+	EventBus.subscribe(&"run_ended", func(p: Dictionary) -> void: ended.append(p))
+	EventBus.emit_event(&"camp_breached", {"wave": 1, "integrity": 0.3})
+	_check(ended.is_empty(), "a breach alone doesn't end the run")
+	CampState.set_value("day", sim.TARGET_DAYS)
+	CampState.set_value("day_phase", "night")
+	GameClock.advance_phase()  # night -> next morning: day TARGET_DAYS ended
+	_check(ended.size() == 1 and ended[0]["won"] and ended[0]["reason"] == "survived", "surviving the target day wins")
+	EventBus.emit_event(&"camp_breached", {"wave": 1, "integrity": 0.0})
+	_check(ended.size() == 1, "only one run_ended per run")
+	CampState.load_mock()
+	EventBus.emit_event(&"camp_breached", {"wave": 1, "integrity": 0.0})
+	_check(ended.size() == 2 and not ended[1]["won"] and ended[1]["reason"] == "walls_fell", "walls falling loses")
+
 	# Infection model alone: quarantine stops spreading.
 	var group: Array = []
 	for i in 6:

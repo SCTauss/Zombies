@@ -6,6 +6,8 @@ extends Node
 ## - Each morning: survivors arrive at the gate, documents land in the inbox.
 ## - Each night: economy (income, food, water, production), infection, approval.
 ## - Fills a fresh camp with citizen records when there are none.
+## - Ends the run (`run_ended`): PLACEHOLDER rules until O-08 is decided:
+##   win by surviving TARGET_DAYS days; lose if the walls fall or nobody's left.
 ##
 ## Replaces core/mock_rules.gd (turns MockRules off on start).
 
@@ -22,8 +24,11 @@ const MAX_QUEUE := 8
 const MAX_INBOX := 8
 ## Keys any role may ask to change with resource_change_requested.
 const RESOURCE_PREFIXES: Array[String] = ["res.", "budget.", "money"]
+## Win condition placeholder (O-08 is open).
+const TARGET_DAYS := 5
 
 var rng := RandomNumberGenerator.new()
+var run_over := false
 var _next_id := 1000
 
 
@@ -33,7 +38,7 @@ func _ready() -> void:
 	for event_name: StringName in [
 		&"resource_change_requested", &"survivor_decision_requested", &"budget_allocation_requested",
 		&"policy_change_requested", &"document_decision_requested", &"citizen_job_change_requested",
-		&"day_started", &"day_ended",
+		&"day_started", &"day_ended", &"camp_breached",
 	]:
 		EventBus.subscribe(event_name, Callable(self, "_on_" + String(event_name)))
 	CampState.state_reset.connect(_on_state_reset)
@@ -43,6 +48,7 @@ func _ready() -> void:
 ## Fill in what a fresh camp needs: citizens matching `population`, a gate
 ## queue and an inbox so the Medic and Politician have something on day 1.
 func _on_state_reset() -> void:
+	run_over = false
 	if not CampState.is_authority():
 		return
 	var citizens: Array = CampState.get_copy("citizens", [])
@@ -208,6 +214,26 @@ func _on_day_ended(payload: Dictionary) -> void:
 
 	CampState.set_value("approval", clampf(CampState.get_value("approval", 0.5) + report["approval_delta"], 0.0, 1.0))
 	CampState.set_value("report.last_day", report)
+
+	if CampState.get_value("population", 0) <= 0:
+		_end_run("everyone_gone")
+	elif report["day"] >= TARGET_DAYS:
+		_end_run("survived")
+
+
+func _on_camp_breached(payload: Dictionary) -> void:
+	if CampState.is_authority() and payload.get("integrity", 1.0) <= 0.0:
+		_end_run("walls_fell")
+
+
+func _end_run(reason: String) -> void:
+	if run_over:
+		return
+	run_over = true
+	EventBus.emit_event(&"run_ended", {
+		"reason": reason, "won": reason == "survived", "day": CampState.get_value("day", 1),
+		"population": CampState.get_value("population", 0), "target_days": TARGET_DAYS,
+	})
 
 
 # --- Helpers ------------------------------------------------------------------
