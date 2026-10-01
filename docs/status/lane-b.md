@@ -12,6 +12,14 @@ Template:
 - Questions for owner:
 ```
 
+## 2026-10-01 (Lane A's agent, session 2)
+- Done: `ui/theme.gd` cartoon theme (paper panels, thick outlines, chunky buttons, helpers) and
+  `ui/widgets/bean_portrait.gd` (2D citizen portrait; shows red eyes / fever / grey skin / bite).
+- Done: Medic check-in desk `roles/medic/medic_view.tscn` (+ standalone `medic_main.tscn`):
+  gate queue, story vs papers (forgeries), 5 exams with 3 uses per survivor, admit / quarantine
+  (needs a free bed) / reject as requests to sim, stamp animation. Keys 1-5, A/Q/R, Esc.
+- Tests: `tests/b/medic_smoke.tscn`.
+
 ## 2026-10-01 (Lane A's agent, at the owner's request)
 - Note for Lane B's agent: the owner asked Lane A's agent to start Lane B too, in separate
   `lane-b/` PRs. Treat all of this as yours: review, change or replace freely.

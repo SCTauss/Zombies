@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tests/b/medic_smoke.gd" id="1_medic"]
+
+[node name="MedicSmoke" type="Node"]
+script = ExtResource("1_medic")
