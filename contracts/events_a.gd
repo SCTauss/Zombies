@@ -18,6 +18,7 @@ const EVENTS: Array[StringName] = [
 	&"defense_upgraded",  # {defense_id, tier}
 	&"defense_placement_requested",  # {type, position: Vector3}
 	&"defense_upgrade_requested",  # {defense_id}
+	&"wave_start_requested",  # {} Military asks the host to send the next wave now
 	&"expedition_departed",  # {expedition_id, squad: [citizen_id], destination}
 	&"expedition_returned",  # {expedition_id, loot: {res_key: amount}, wounded: [citizen_id], samples, survivors: [citizen]}
 	&"blueprint_found",  # {blueprint_id}
