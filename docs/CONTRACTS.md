@@ -67,6 +67,32 @@ func close_view() -> void            # called when the player leaves; hide UI, s
 - The standalone `<role>_main.tscn` wraps the view with a mock world and opens it
   right away, so each role still runs alone (F6).
 
+## Session and lobby (Phase 3)
+
+Lane A's `Net` autoload (`core/net/net.gd`) owns the session. Lane B's menus
+(`ui/main_menu.tscn` is the main scene, `ui/lobby.tscn`) use only this API:
+
+```gdscript
+Net.players: Dictionary        # peer_id -> {"name": String, "role": String}  ("" = no role yet)
+signal players_changed         # the player list or someone's role changed
+signal run_started             # the host started the run: load world/camp/camp_main.tscn now
+func host(port := Net.DEFAULT_PORT) -> Error
+func join(address: String, port := Net.DEFAULT_PORT) -> Error
+func leave() -> void
+func set_player_name(player_name: String) -> void   # this peer's display name
+func request_role(role: String) -> void             # host gives it only if nobody has it
+func my_role() -> String                            # this peer's role, "" if none / offline
+func start_run() -> void                            # host only; every role may stay empty
+func is_online() -> bool
+```
+
+- **Solo**: no session; load the camp directly. The player controls one
+  character at a time and switches with Tab.
+- **Online**: each player controls their role's character only. Characters with
+  no player stand at their stations (O-06 decides what they do).
+- The host is the authority (camp state, sim, zombies, waves). Clients see the
+  host's zombies as copies; their own character's movement is sent to everyone.
+
 ## Camp state: draft keys
 
 | Key | Meaning | Written by (rules) | Read by |
@@ -124,5 +150,6 @@ Append-only. Format: `YYYY-MM-DD, lane, change, issue link`.
 
 - 2026-10-01, owner, initial draft.
 - 2026-10-01, A, contracts in code (`contracts/`); payload keys listed per event; added state key `citizens` (citizen records) and the shared `events_shared.gd`.
+- 2026-10-01, A, Phase 3: state key `defenses` + defense record; events `zombie_died`, `defense_placed`, `defense_upgraded`, `defense_placement_requested`, `defense_upgrade_requested`; session/lobby API section.
 - 2026-10-01, A (for Lane B sim), state prefixes `gate.`, `report.`, `documents.`; document record; citizen fields `symptoms`, `arrived_day`; request events `survivor_decision_requested`, `budget_allocation_requested`, `policy_change_requested`, `document_decision_requested`; event `zombie_spawned_inside`.
 - 2026-10-01, owner (H-009), role views opened from camp stations; view contract (`open_view` / `close_view` / `exit_requested`); Labor request events `building_placement_requested`, `building_demolish_requested`.

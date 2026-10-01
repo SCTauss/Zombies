@@ -13,6 +13,11 @@ const EVENTS: Array[StringName] = [
 	&"wave_started",  # {wave, count, day}
 	&"wave_ended",  # {wave, killed, breached}
 	&"camp_breached",  # {wave, integrity}
+	&"zombie_died",  # {zombie_id, position: Vector3} (clients pop their copy of it)
+	&"defense_placed",  # {defense_id, type, position: Vector3}
+	&"defense_upgraded",  # {defense_id, tier}
+	&"defense_placement_requested",  # {type, position: Vector3}
+	&"defense_upgrade_requested",  # {defense_id}
 	&"expedition_departed",  # {expedition_id, squad: [citizen_id], destination}
 	&"expedition_returned",  # {expedition_id, loot: {res_key: amount}, wounded: [citizen_id], samples, survivors: [citizen]}
 	&"blueprint_found",  # {blueprint_id}
