@@ -21,10 +21,7 @@ func _ready() -> void:
 	Net.peer_left.connect(func(id: int) -> void: _add_line("peer %d left" % id))
 	EventBus.event_emitted.connect(func(event_name: StringName, payload: Dictionary) -> void:
 		_add_line("event %s %s" % [event_name, payload]))
-	# Stand-in for sim (Lane B), which normally applies resource requests.
-	EventBus.subscribe(&"resource_change_requested", func(payload: Dictionary) -> void:
-		if CampState.is_authority():
-			CampState.add_value(payload["key"], payload["amount"]))
+	# Resource requests are applied by MockRules (core/) on the host.
 	CampState.value_changed.connect(func(_k: String, _o: Variant, _n: Variant) -> void: _refresh())
 	CampState.state_reset.connect(_refresh)
 	_refresh()

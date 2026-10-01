@@ -15,6 +15,7 @@ EventBus="*res://core/event_bus.gd"
 CampState="*res://core/camp_state.gd"
 GameClock="*res://core/game_clock.gd"
 Net="*res://core/net/net.gd"
+MockRules="*res://core/mock_rules.gd"
 
 [display]
 

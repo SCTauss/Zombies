@@ -12,6 +12,22 @@ Template:
 - Questions for owner:
 ```
 
+## 2026-10-01 (session 3)
+- Done: Phase 1 Military toy + world greybox.
+  - `world/camp_greybox.tscn`: map built from code (ground, square wall with 4 gates, heart,
+    spawn points), runtime navmesh bake, placement rules (`is_buildable`, `occupy`).
+  - `world/zombies/`: cartoon zombie (navigation, hit squash/flash, gore pop) + wave spawner
+    (`wave_started`, `wave_ended`, `camp_breached`, writes `defense.integrity`).
+  - `roles/military/military_main.tscn`: TD greybox. Watchtower with a 4-tier upgrade path,
+    ghost placement, grid/freeform toggle (O-13), night starts a wave. Costs go through
+    `resource_change_requested` on `budget.military`.
+  - `core/mock_rules.gd` (`MockRules`): applies resource requests on mock state only.
+  - Look: owner direction "friendslop, brutal cartoon, like PEAK" (toon shading + outlines, gore pop).
+  - Tests: `tests/a/world_smoke.tscn` passes. `tests/a/screenshot.tscn` saves a screenshot of any scene.
+- In progress (branch / PR): `lane-a/td-greybox` (stacked on `lane-a/net-spike`).
+- Next: Labor toy (place prefab buildings → `buildings`, `capacity.*`).
+- Needs from Lane B: when `sim/` applies `resource_change_requested`, set `MockRules.enabled = false`.
+
 ## 2026-10-01 (session 2)
 - Done: networking spike. `Net` autoload (PROTOTYPE): ENet listen-server, host = authority,
   snapshot on join + per-key state sync, host→client event relay, client→host `*_requested`

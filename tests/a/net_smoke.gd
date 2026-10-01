@@ -29,10 +29,9 @@ func _ready() -> void:
 
 
 func _start_host() -> void:
-	# Stand-in for sim (Lane B), which normally applies resource requests.
+	# MockRules (core/) applies the request; we only check who sent it.
 	EventBus.subscribe(&"resource_change_requested", func(payload: Dictionary) -> void:
-		_request_from = payload.get("peer_id", 0)
-		CampState.add_value(payload["key"], payload["amount"]))
+		_request_from = payload.get("peer_id", 0))
 	Net.peer_joined.connect(func(_id: int) -> void: GameClock.advance_phase())
 	Net.peer_left.connect(func(_id: int) -> void:
 		_finish(_request_from > 1, "request from peer %d" % _request_from))
