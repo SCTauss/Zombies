@@ -22,6 +22,8 @@ static func citizen(id: int, citizen_name: String) -> Dictionary:
 		"legal_status": "resident",  # "resident" | "visitor" | "quarantined" | "prisoner" | ...
 		"faction": "",
 		"is_recruit": false,
+		"symptoms": [],  # symptom ids the Medic can discover ("fever", "cough", "bite", "red_eyes", ...)
+		"arrived_day": 0,
 	}
 
 
@@ -36,6 +38,21 @@ static func building(id: int, type: String, position: Vector3) -> Dictionary:
 		"built": false,  # false while under construction
 		"progress": 0.0,  # 0..1 construction progress
 		"capacity": {},  # e.g. {"housing": 4} or {"beds": 2}; summed into capacity.<kind>
+	}
+
+
+## Document record (owned by sim/, Lane B). Stored in CampState "documents.inbox"
+## until the Politician signs or rejects it.
+static func document(id: int, kind: String, from_role: String, title: String) -> Dictionary:
+	return {
+		"id": id,
+		"kind": kind,  # e.g. "budget_request", "permit", "petition", "pardon"
+		"from_role": from_role,  # "military" | "labor" | "medic" | "citizens"
+		"title": title,
+		"body": "",
+		"effects_if_signed": {},  # state key -> delta, applied by sim on signing
+		"effects_if_rejected": {},
+		"day": 1,
 	}
 
 

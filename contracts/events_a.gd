@@ -25,6 +25,8 @@ const EVENTS: Array[StringName] = [
 	&"vehicle_built",  # {vehicle_id, type}
 	# requests to sim (Lane B applies them)
 	&"citizen_job_change_requested",  # {citizen_id, job}
+	# world: a turned citizen becomes a zombie inside the camp
+	&"zombie_spawned_inside",  # {citizen_id, position: Vector3}
 	# requests to Labor's construction (host applies them)
 	&"building_placement_requested",  # {type, position: Vector3, rotation}
 	&"building_demolish_requested",  # {building_id}
