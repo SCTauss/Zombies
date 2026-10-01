@@ -1,0 +1,18 @@
+# Godot 4
+.godot/
+/android/
+
+# Builds
+/build/
+/export/
+
+# C# (only if O-01 picks C#)
+.mono/
+*.csproj.user
+
+# OS / editors
+.DS_Store
+Thumbs.db
+*.tmp
+.vscode/
+.idea/
