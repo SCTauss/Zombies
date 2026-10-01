@@ -13,4 +13,7 @@ const KEYS: Array[String] = [
 	"virus.",  # this run's virus parameters, revealed through research
 	"policies.active",  # Array of policy ids
 	"research.done",  # Array of research ids
+	"gate.",  # gate.queue: Array of citizen records waiting at the gate for the Medic
+	"report.",  # report.last_day: Dictionary summary of the last day's economy (for UIs)
+	"documents.",  # documents.inbox: Array of document records waiting for the Politician
 ]

@@ -124,4 +124,5 @@ Append-only. Format: `YYYY-MM-DD, lane, change, issue link`.
 
 - 2026-10-01, owner, initial draft.
 - 2026-10-01, A, contracts in code (`contracts/`); payload keys listed per event; added state key `citizens` (citizen records) and the shared `events_shared.gd`.
+- 2026-10-01, A (for Lane B sim), state prefixes `gate.`, `report.`, `documents.`; document record; citizen fields `symptoms`, `arrived_day`; request events `survivor_decision_requested`, `budget_allocation_requested`, `policy_change_requested`, `document_decision_requested`; event `zombie_spawned_inside`.
 - 2026-10-01, owner (H-009), role views opened from camp stations; view contract (`open_view` / `close_view` / `exit_requested`); Labor request events `building_placement_requested`, `building_demolish_requested`.
