@@ -30,4 +30,6 @@ const EVENTS: Array[StringName] = [
 	# requests to Labor's construction (host applies them)
 	&"building_placement_requested",  # {type, position: Vector3, rotation}
 	&"building_demolish_requested",  # {building_id}
+	&"building_repair_requested",  # {building_id}
+	&"building_repaired",  # {building_id, cost}
 ]
