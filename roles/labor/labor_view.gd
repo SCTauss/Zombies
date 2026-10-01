@@ -6,6 +6,7 @@ extends Node
 ## Controls (while open): WASD / arrows pan, wheel zooms.
 ##   1-6 = pick a building (hold Shift to keep placing), R = rotate,
 ##   left click = place / select, X = demolish selected (50% materials back),
+##   F = repair selected (materials scale with the damage),
 ##   G = grid on/off, right click = cancel, Esc = cancel / leave the view.
 ##   F9 (mock only) = +$500 Labor budget and +100 materials.
 
@@ -79,6 +80,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_ghost_rotation = wrapf(_ghost_rotation + PI / 2.0, 0.0, TAU)
 			KEY_X, KEY_DELETE:
 				_demolish_selected()
+			KEY_F:
+				_repair_selected()
 			KEY_G:
 				BuildGrid.enabled = not BuildGrid.enabled
 				_say("Grid " + ("on" if BuildGrid.enabled else "off (freeform)"))
@@ -173,6 +176,15 @@ func _demolish_selected() -> void:
 	_selected_id = -1
 
 
+func _repair_selected() -> void:
+	if _camp.buildings.view_for(_selected_id) == null:
+		_say("Click a building first")
+		return
+	var cost: int = _camp.construction.repair_cost(_selected_id)
+	var problem: String = _camp.construction.repair(_selected_id)
+	_say(problem if not problem.is_empty() else "Patched up for %d materials." % cost)
+
+
 func _on_building_completed(payload: Dictionary) -> void:
 	if is_open:
 		_say("%s finished!" % BuildingTypes.get_type(payload["type"])["name"])
@@ -195,12 +207,18 @@ func _refresh_ui() -> void:
 			CampState.get_value("capacity.workshops", 0), CampState.get_value("capacity.farms", 0),
 			CampState.get_value("capacity.water", 0)],
 	])
+	var damaged: int = _camp.construction.damaged_count()
+	if damaged > 0:
+		lines.append("Damaged buildings: %d (select one, F to repair)" % damaged)
 	var view: Node3D = _camp.buildings.view_for(_selected_id)
 	if view:
 		var record: Dictionary = view.record
 		var state := "built" if record["built"] else "building %d%%" % roundi(record["progress"] * 100)
-		lines.append("Selected: %s (%s, health %d%%)   [X] demolish" % [
-			BuildingTypes.get_type(record["type"])["name"], state, roundi(record["health"] * 100)])
+		var repair := ""
+		if record["health"] < 1.0:
+			repair = "   [F] repair: %d materials" % _camp.construction.repair_cost(_selected_id)
+		lines.append("Selected: %s (%s, health %d%%)   [X] demolish%s" % [
+			BuildingTypes.get_type(record["type"])["name"], state, roundi(record["health"] * 100), repair])
 	if CampState.is_mock:
 		lines.append("(mock camp state, F9 = +$500 and +100 materials)")
 	_info.text = "\n".join(lines)

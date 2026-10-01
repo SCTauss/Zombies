@@ -12,6 +12,14 @@ Template:
 - Questions for owner:
 ```
 
+## 2026-10-01 (session 6)
+- Done: Phase 2 cross-role effects. `Sim` (Lane B) registered as an autoload. Zombies stop to
+  smash buildings they pass (damage via `construction.damage`, so it becomes Labor repair work).
+  Labor repairs (F) for materials scaled by damage (`building_repair_requested`, `building_repaired`).
+  `citizen_turned` → a zombie bursts out of a house inside the camp (`zombie_spawned_inside`).
+  Waves scale with `virus.toughness` / `virus.speed`.
+- Tests: `tests/a/cross_role_smoke.tscn`.
+
 ## 2026-10-01 (session 5)
 - Done: H-009 shared camp (`world/camp/camp_main.tscn`, now the main scene). 4 cartoon "bean"
   characters (one per role, `world/players/`), third-person follow camera, 4 stations

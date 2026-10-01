@@ -1,6 +1,8 @@
 extends CharacterBody3D
 ## PROTOTYPE basic zombie: walks to `target` on the navigation mesh.
 ## Set `target`, `max_health` and `speed` before adding it to the tree.
+## On the way it may stop to smash a building it passes (damage goes through
+## Labor's construction rules, so it shows up as repair work).
 ## Cartoon look: big head, mismatched googly eyes, stubby arms. Pops into
 ## chunks on death (world/fx/gore_pop.gd).
 
@@ -14,6 +16,13 @@ const SKIN := Color(0.55, 0.82, 0.35)
 const SHIRT_COLORS: Array[Color] = [
 	Color(0.55, 0.30, 0.75), Color(0.95, 0.45, 0.25), Color(0.25, 0.55, 0.90), Color(0.95, 0.80, 0.25),
 ]
+const ATTACK_REACH := 2.5  # meters from a building's footprint
+const ATTACK_DAMAGE := 0.06  # building health per hit
+const ATTACK_INTERVAL := 0.8
+const ATTACK_HITS := Vector2i(2, 4)
+
+## Chance to stop and smash a building it walks past (checked once per building).
+static var attack_chance := 0.35
 
 @export var speed := 2.0
 @export var max_health := 30.0
@@ -25,6 +34,11 @@ var target := Vector3.ZERO
 var _visual: Node3D
 var _flash_materials: Array[StandardMaterial3D] = []
 var _wobble := randf() * TAU
+var _scan_timer := randf() * 0.5
+var _considered := {}  # building ids already rolled for
+var _attack_target: Node3D
+var _attack_hits_left := 0
+var _attack_timer := 0.0
 
 @onready var agent: NavigationAgent3D = $NavigationAgent3D
 
@@ -43,6 +57,13 @@ func _physics_process(delta: float) -> void:
 		reached_target.emit(self)
 		queue_free()
 		return
+	if _attack_target != null:
+		_attack(delta)
+		return
+	_scan_timer -= delta
+	if _scan_timer <= 0.0:
+		_scan_timer = 0.5
+		_look_for_building()
 	var to_next := agent.get_next_path_position() - global_position
 	to_next.y = 0
 	if to_next.length() > 0.01:
@@ -55,6 +76,53 @@ func _physics_process(delta: float) -> void:
 	# Dumb shamble: sway side to side while walking.
 	_wobble += delta * speed * 3.0
 	_visual.rotation.z = sin(_wobble) * 0.18
+
+
+func _look_for_building() -> void:
+	if not CampState.is_authority():
+		return
+	var here := Vector2(global_position.x, global_position.z)
+	for view: Node3D in get_tree().get_nodes_in_group(&"building_views"):
+		var id: int = view.building_id()
+		if _considered.has(id) or not view.record.get("built", false):
+			continue
+		if _distance_to_rect(here, view.footprint()) > ATTACK_REACH:
+			continue
+		_considered[id] = true
+		if randf() < attack_chance:
+			_attack_target = view
+			_attack_hits_left = randi_range(ATTACK_HITS.x, ATTACK_HITS.y)
+			_attack_timer = ATTACK_INTERVAL
+			return
+
+
+func _attack(delta: float) -> void:
+	velocity = Vector3.ZERO
+	if not is_instance_valid(_attack_target) or not _attack_target.is_inside_tree() or _attack_hits_left <= 0:
+		_attack_target = null
+		return
+	var to_building := _attack_target.global_position - global_position
+	rotation.y = atan2(-to_building.x, -to_building.z)
+	_attack_timer -= delta
+	# Wind up: lean back, then lunge on the hit.
+	_visual.rotation.x = lerpf(_visual.rotation.x, 0.25, 1.0 - exp(-8.0 * delta))
+	if _attack_timer > 0.0:
+		return
+	_attack_timer = ATTACK_INTERVAL
+	_attack_hits_left -= 1
+	_visual.rotation.x = -0.5
+	_attack_target.shake()
+	var construction := get_tree().get_first_node_in_group(&"construction")
+	if construction:
+		construction.damage(_attack_target.building_id(), ATTACK_DAMAGE)
+	if _attack_hits_left <= 0:
+		_attack_target = null
+		_visual.rotation.x = 0.0
+
+
+static func _distance_to_rect(p: Vector2, rect: Rect2) -> float:
+	var closest := Vector2(clampf(p.x, rect.position.x, rect.end.x), clampf(p.y, rect.position.y, rect.end.y))
+	return p.distance_to(closest)
 
 
 ## Straight-line (XZ) distance to the target. Towers use it to pick who's closest to the camp.
