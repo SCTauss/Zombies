@@ -12,6 +12,12 @@ Template:
 - Questions for owner:
 ```
 
+## 2026-10-01 (Lane A's agent, session 3)
+- Done: Politician office `roles/politician/politician_view.tscn` (+ `politician_main.tscn`):
+  tabs Inbox (sign/reject documents with effects shown), Budget (draft then apply a split of the
+  treasury), Policies (enact/revoke cards), Report (last night). All actions are sim requests.
+- Tests: `tests/b/politician_smoke.tscn`. With this, all four stations open a view in the camp.
+
 ## 2026-10-01 (Lane A's agent, session 2)
 - Done: `ui/theme.gd` cartoon theme (paper panels, thick outlines, chunky buttons, helpers) and
   `ui/widgets/bean_portrait.gd` (2D citizen portrait; shows red eyes / fever / grey skin / bite).

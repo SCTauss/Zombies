@@ -1,0 +1,9 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://roles/politician/politician_main.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://roles/politician/politician_view.tscn" id="2_view"]
+
+[node name="PoliticianMain" type="Node"]
+script = ExtResource("1_main")
+
+[node name="PoliticianView" parent="." instance=ExtResource("2_view")]
