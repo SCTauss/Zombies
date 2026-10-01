@@ -6,7 +6,7 @@ extends Node
 ## Controls (while open): WASD / arrows pan, wheel zooms.
 ##   1-6 = pick a building (hold Shift to keep placing), R = rotate,
 ##   left click = place / select, X = demolish selected (50% materials back),
-##   F = repair selected (materials scale with the damage),
+##   F = repair selected (materials scale with the damage), J = workers panel (jobs),
 ##   G = grid on/off, right click = cancel, Esc = cancel / leave the view.
 ##   F9 (mock only) = +$500 Labor budget and +100 materials.
 
@@ -15,8 +15,10 @@ signal exit_requested
 const BuildingTypes := preload("res://roles/labor/building_types.gd")
 const BuildingView := preload("res://roles/labor/building_view.gd")
 const BuildGrid := preload("res://world/build_grid.gd")
+const WorkersPanel := preload("res://roles/labor/workers_panel.gd")
 
 var is_open := false
+var workers: PanelContainer
 
 var _camp: Node3D
 var _ghost: Node3D
@@ -64,6 +66,7 @@ func dev_demo() -> void:
 		var problem: String = _camp.construction.place(entry[0], BuildGrid.snap(entry[1]))
 		if not problem.is_empty():
 			push_warning("dev_demo: %s at %s: %s" % [entry[0], entry[1], problem])
+	workers.visible = true
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -82,6 +85,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_demolish_selected()
 			KEY_F:
 				_repair_selected()
+			KEY_J:
+				workers.visible = not workers.visible
 			KEY_G:
 				BuildGrid.enabled = not BuildGrid.enabled
 				_say("Grid " + ("on" if BuildGrid.enabled else "off (freeform)"))
@@ -252,6 +257,23 @@ func _build_ui() -> void:
 		button.add_theme_font_size_override("font_size", 18)
 		button.pressed.connect(_start_placing.bind(type_id))
 		bar.add_child(button)
+	var jobs := Button.new()
+	jobs.text = "Workers [J]"
+	jobs.focus_mode = Control.FOCUS_NONE
+	jobs.custom_minimum_size = Vector2(0, 48)
+	jobs.add_theme_font_size_override("font_size", 18)
+	jobs.pressed.connect(func() -> void: workers.visible = not workers.visible)
+	bar.add_child(jobs)
+
+	workers = WorkersPanel.new()
+	workers.set_anchors_and_offsets_preset(Control.PRESET_RIGHT_WIDE)
+	workers.offset_left = -440
+	workers.offset_top = 16
+	workers.offset_bottom = -90
+	workers.offset_right = -16
+	workers.visible = false
+	_layer.add_child(workers)
+
 	var leave := Button.new()
 	leave.text = "Leave [Esc]"
 	leave.focus_mode = Control.FOCUS_NONE

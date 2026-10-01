@@ -27,7 +27,7 @@ func _run() -> void:
 
 	_check(camp.players.size() == 4, "4 player characters")
 	_check(camp.stations.size() == 4, "4 stations")
-	_check(camp.views.has("military") and camp.views.has("labor"), "Lane A views loaded")
+	_check(camp.views.size() == 4, "all 4 role views loaded (%s)" % [camp.views.keys()])
 	_check(camp.controlled_role == "military", "starts as Military")
 	_check(camp.follow_camera.camera.current, "third-person camera active")
 
@@ -68,10 +68,20 @@ func _run() -> void:
 	_check(not camp.try_interact(), "can't use another role's station")
 	_check(camp.active_view == "", "no view opened")
 
-	# Desk roles without a view yet don't crash.
+	# A desk role: the Politician opens the office from its own desk.
 	camp.control("politician")
 	_check(camp.controlled_role == "politician", "switched to Politician")
-	camp.try_interact()
+	_check(camp.try_interact(), "Politician uses the office desk")
+	_check(camp.active_view == "politician" and camp.views["politician"].is_open, "office view open")
+	camp.views["politician"].exit_requested.emit()
+	_check(camp.active_view == "", "office closed")
+
+	# Labor's workers panel: a job change goes to sim.
+	var WorkersPanel := load("res://roles/labor/workers_panel.gd")
+	var citizen: Dictionary = CampState.get_value("citizens")[0]
+	var next: String = WorkersPanel.next_job(citizen["job"])
+	EventBus.emit_event(&"citizen_job_change_requested", {"citizen_id": citizen["id"], "job": next})
+	_check(CampState.get_value("citizens")[0]["job"] == next, "job changed to %s" % next)
 
 
 func _check(condition: bool, label: String) -> void:
