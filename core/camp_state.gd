@@ -53,6 +53,14 @@ func set_value(key: String, value: Variant) -> bool:
 	return true
 
 
+## Mirror a value from the authority. Only `Net` calls this, on clients.
+## Game code uses set_value() or a request event.
+func apply_remote_value(key: String, value: Variant) -> void:
+	var old: Variant = _state.get(key)
+	_state[key] = value
+	value_changed.emit(key, old, value)
+
+
 ## Add `amount` (int or float) to a numeric value (missing keys count as 0).
 ## int + int stays int, so counters like `money` don't turn into floats.
 func add_value(key: String, amount: Variant) -> bool:
