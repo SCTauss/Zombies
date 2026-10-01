@@ -33,6 +33,7 @@ var active_view := ""  # role whose view is open, or ""
 var _hud: CanvasLayer
 var _who: Label
 var _clock: Label
+var _resources: Label
 var _prompt: Label
 var _message: Label
 var _message_time := 0.0
@@ -154,6 +155,11 @@ func _process(delta: float) -> void:
 		spawner_text = "   WAVE %d: %d zombies!" % [spawner.wave, spawner.remaining()]
 	_clock.text = "Day %d, %s (%d%%)%s" % [GameClock.current_day(), GameClock.current_phase(),
 		roundi(GameClock.phase_progress() * 100), spawner_text]
+	_resources.text = "$%d   Food %d   Water %d   Materials %d\nPeople %d / %d homes   Approval %d%%   Infection %d%%   Walls %d%%" % [
+		CampState.get_value("money", 0), CampState.get_value("res.food", 0), CampState.get_value("res.water", 0),
+		CampState.get_value("res.materials", 0), CampState.get_value("population", 0),
+		CampState.get_value("capacity.housing", 0), roundi(CampState.get_value("approval", 0.0) * 100),
+		roundi(CampState.get_value("infection.level", 0.0) * 100), roundi(CampState.get_value("defense.integrity", 1.0) * 100)]
 
 
 func _add_station(role: String) -> void:
@@ -203,6 +209,14 @@ func _build_hud() -> void:
 	_message = _label(26)
 	_message.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25))
 	top.add_child(_message)
+	_resources = _label(20)
+	_resources.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_resources.offset_left = -560
+	_resources.offset_right = -20
+	_resources.offset_top = 16
+	_resources.grow_horizontal = Control.GROW_DIRECTION_BEGIN  # long text grows left, not off-screen
+	_resources.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_hud.add_child(_resources)
 	_prompt = _label(30)
 	_prompt.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	_prompt.position.y -= 110

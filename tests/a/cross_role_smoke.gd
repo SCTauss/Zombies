@@ -77,6 +77,7 @@ func _run() -> void:
 	_check(construction.repair(house_id) == "Nothing to repair", "can't repair a healthy building")
 
 	# A citizen turns: a zombie bursts out of a house inside the camp, tougher with the virus.
+	construction.demolish(house_id)  # only the camp's own houses are left, all inside the walls
 	CampState.set_value("virus.toughness", 2.0)
 	EventBus.emit_event(&"citizen_turned", {"citizen_id": 1, "name": "Test Dummy"})
 	_check(spawner.inside_alive == 1, "one zombie inside the camp")
