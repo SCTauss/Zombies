@@ -31,15 +31,18 @@ func _run(view: Node) -> void:
 	_check(CampState.get_value("documents.inbox").size() == 1, "rejected document left the inbox")
 
 	# Budget: draft first, apply moves money from the treasury.
+	# (Signed documents above may already have changed budgets, so compare to "before".)
 	money = CampState.get_value("money")
+	var military: int = CampState.get_value("budget.military")
+	var labor: int = CampState.get_value("budget.labor")
 	view.show_tab(1)
 	view.nudge_budget("military", 25)
 	view.nudge_budget("military", 25)
 	view.nudge_budget("labor", -25)
-	_check(CampState.get_value("budget.military") == 250, "draft doesn't change state yet")
+	_check(CampState.get_value("budget.military") == military, "draft doesn't change state yet")
 	view.apply_budget()
-	_check(CampState.get_value("budget.military") == 300, "military budget raised to 300")
-	_check(CampState.get_value("budget.labor") == 225, "labor budget cut to 225")
+	_check(CampState.get_value("budget.military") == military + 50, "military budget raised by 50")
+	_check(CampState.get_value("budget.labor") == labor - 25, "labor budget cut by 25")
 	_check(CampState.get_value("money") == money - 25, "treasury paid the difference")
 
 	# Policies toggle.
