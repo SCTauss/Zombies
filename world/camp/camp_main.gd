@@ -3,8 +3,11 @@ extends "res://world/camp/camp_base.gd"
 ## role stations. Walk with WASD (camera-relative), Shift sprints, Space jumps,
 ## right drag / arrows orbit the camera, wheel zooms.
 ## E at your own station opens your role's view; Esc leaves it.
-## Tab switches which character you control (solo play; O-06/O-11 still open).
-## F1 = skip to the next day phase (dev).
+## Solo: Tab switches which character you control (O-06/O-11 still open).
+## Online (Net session): you control your lobby role's character; the others
+## are driven by their players, or stand at their stations if nobody has them.
+## No role online = spectator (camera only).
+## F1 = skip to the next day phase (dev, host/solo only).
 
 const PlayerScene := preload("res://world/players/player.tscn")
 const StationScript := preload("res://world/stations/station.gd")
@@ -29,6 +32,8 @@ var stations := {}  # role -> station
 var views := {}  # role -> view (missing until that role's view exists)
 var controlled_role := "military"
 var active_view := ""  # role whose view is open, or ""
+var online := false
+var spectating := false
 
 var _hud: CanvasLayer
 var _who: Label
@@ -44,6 +49,12 @@ var _message_time := 0.0
 func _ready() -> void:
 	top_down_camera().active = false
 	GameClock.auto_advance = true
+	online = Net.is_online()
+	if online:
+		controlled_role = Net.my_role()
+		spectating = controlled_role == ""
+		if spectating:
+			controlled_role = "military"  # just for the camera
 	for role in ROLES:
 		_add_station(role)
 		_add_player(role)
@@ -63,15 +74,20 @@ func dev_demo() -> void:
 	views["military"].dev_demo()
 
 
-## Take control of `role`'s character (solo play).
+## Take control of `role`'s character.
 func control(role: String) -> void:
 	for r: String in players:
-		players[r].controlled = r == role
+		players[r].controlled = r == role and not spectating
 	controlled_role = role
 	follow_camera.yaw = players[role].rotation.y  # start behind the character
 	follow_camera.follow(players[role])
 	follow_camera.camera.make_current()
-	_who.text = "You are the %s   (Tab: switch character)" % CharacterLook.display_name(role).to_upper()
+	if spectating:
+		_who.text = "SPECTATING (no role picked)"
+	elif online:
+		_who.text = "You are the %s" % CharacterLook.display_name(role).to_upper()
+	else:
+		_who.text = "You are the %s   (Tab: switch character)" % CharacterLook.display_name(role).to_upper()
 	_who.add_theme_color_override("font_color", CharacterLook.tag_color(role))
 
 
@@ -87,7 +103,7 @@ func station_in_range() -> Node3D:
 ## Use the station in range. Returns true if a view opened.
 func try_interact() -> bool:
 	var station := station_in_range()
-	if station == null:
+	if station == null or spectating:
 		return false
 	if station.role != controlled_role:
 		_say("That's the %s's %s." % [CharacterLook.display_name(station.role), StationScript.title(station.role).to_lower()])
@@ -127,9 +143,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_E:
 			try_interact()
 		KEY_TAB:
+			if online:
+				return
 			control(ROLES[(ROLES.find(controlled_role) + 1) % ROLES.size()])
 		KEY_F1:
-			GameClock.advance_phase()
+			GameClock.advance_phase()  # only does anything on the authority
 		_:
 			return
 	get_viewport().set_input_as_handled()
@@ -174,6 +192,9 @@ func _add_station(role: String) -> void:
 func _add_player(role: String) -> void:
 	var player := PlayerScene.instantiate()
 	player.role = role
+	player.name = "Player_" + role  # same node path on every peer, for RPCs
+	if online:
+		player.owner_peer = Net.peer_for_role(role)
 	# Stand between the station and the heart, facing the station.
 	var spot: Vector3 = STATION_SPOTS[role]
 	player.position = spot - spot.normalized() * 2.2

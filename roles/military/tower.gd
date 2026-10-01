@@ -19,6 +19,8 @@ const TIER_COLORS: Array[Color] = [
 var type_id := "watchtower"
 var tier := 0
 var is_ghost := false
+## Id of its record in camp state "defenses" (-1 for ghosts and test towers).
+var defense_id := -1
 var selected := false:
 	set(value):
 		selected = value
@@ -66,9 +68,15 @@ func upgrade_cost() -> int:
 
 
 func upgrade() -> void:
-	if not can_upgrade():
+	if can_upgrade():
+		set_tier(tier + 1)
+
+
+## Show tier `new_tier` (from camp state), popping if it went up.
+func set_tier(new_tier: int) -> void:
+	if new_tier == tier and _visual != null:
 		return
-	tier += 1
+	tier = new_tier
 	_build_visual()
 	_update_ring()
 	# Pop!
@@ -88,8 +96,10 @@ func _process(delta: float) -> void:
 		if _tracer_time <= 0.0:
 			_tracer.visible = false
 			_flash.visible = false
-	if is_ghost or not CampState.is_authority():
+	if is_ghost:
 		return
+	# On clients the only zombies are puppet copies: shots there are for show
+	# (puppets ignore damage); the host's towers do the real killing.
 	_cooldown -= delta
 	var target := _find_target()
 	if target == null:
