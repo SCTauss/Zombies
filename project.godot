@@ -1,0 +1,21 @@
+; Engine configuration file.
+; Owned by Lane A (see AGENTS.md §2). Lane B requests changes via an issue.
+
+config_version=5
+
+[application]
+
+config/name="Brain Drain"
+run/main_scene="res://core/dev/dev_boot.tscn"
+config/features=PackedStringArray("4.7", "Forward Plus")
+
+[autoload]
+
+EventBus="*res://core/event_bus.gd"
+CampState="*res://core/camp_state.gd"
+GameClock="*res://core/game_clock.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
