@@ -40,6 +40,18 @@ func _test_camp_state() -> void:
 	snap["money"] = 0
 	_check(CampState.get_value("money") == 900, "snapshot is a copy")
 
+	var copy: Array = CampState.get_copy("policies.active")
+	copy.append("x")
+	_check(CampState.get_value("policies.active").is_empty(), "get_copy returns a copy")
+
+	# Contracts: every mock key is declared in contracts/state_*.gd.
+	_check(CampState.is_declared("res.food") and CampState.is_declared("day"), "known keys declared")
+	_check(not CampState.is_declared("nonsense.key"), "unknown key not declared")
+	for key: String in CampState.snapshot():
+		_check(CampState.is_declared(key), "mock key '%s' is declared" % key)
+	for event_name in [&"day_started", &"resource_change_requested", &"survivor_admitted"]:
+		_check(EventBus.is_declared(event_name), "event %s declared" % event_name)
+
 
 func _test_event_bus() -> void:
 	var received: Array = []
