@@ -12,6 +12,21 @@ Template:
 - Questions for owner:
 ```
 
+## 2026-10-01 (session 7)
+- Done: Phase 3 multiplayer core.
+  - `Net` session API (docs/CONTRACTS.md "Session and lobby"): players + names + roles (host
+    grants free roles), `start_run()` → `run_started` on every peer.
+  - Characters: the owner peer simulates its role's character and sends state ~20 Hz
+    (unreliable); others show a gliding puppet with the same animation.
+  - Zombies: `world/zombies/zombie_sync.gd` sends the host's zombies ~10 Hz; clients show
+    puppets, pop them on `zombie_died`. Towers on clients shoot puppets for show only.
+  - Towers are now camp state `defenses` (`roles/military/defense_rules.gd` + `tower_layer.gd`),
+    so everyone sees them; client placement/upgrade go as requests. `wave.*` state for wave status.
+  - Camp: online you control your lobby role only (no Tab); no role = spectator.
+- Tests: `tests/a/net_camp_smoke.tscn` (two processes: lobby flow, towers/zombies on the client,
+  client movement on the host, client house request applied and synced back).
+- Next: Lane B main menu + lobby on top of the session API; then a real two-PC test.
+
 ## 2026-10-01 (session 6)
 - Done: Phase 2 cross-role effects. `Sim` (Lane B) registered as an autoload. Zombies stop to
   smash buildings they pass (damage via `construction.damage`, so it becomes Labor repair work).

@@ -59,10 +59,12 @@ func close_view() -> void:
 
 ## Dev / screenshot helper: a few towers and a wave.
 func dev_demo() -> void:
+	CampState.add_value(BUDGET_KEY, 2000)
 	for pos in [Vector3(-5, 0, -13), Vector3(5, 0, -13), Vector3(13, 0, 5), Vector3(-13, 0, 5)]:
-		var tower := _place_tower(BuildGrid.snap(pos))
-		tower.tier = randi_range(0, 2)
-		tower.upgrade()
+		_camp.defense_rules.place(TOWER_TYPE, BuildGrid.snap(pos))
+	for record: Dictionary in CampState.get_value("defenses", []):
+		for i in randi_range(1, 3):
+			_camp.defense_rules.upgrade(record["id"])
 	_start_wave()
 
 
@@ -121,16 +123,7 @@ func _build_cost() -> int:
 
 
 func _can_place_at(pos: Vector3) -> bool:
-	return _camp.map.is_buildable(pos, Tower.RADIUS) and _budget() >= _build_cost()
-
-
-## Ask for money. Returns false (and says why) if the budget is too low.
-func _spend(amount: int, reason: String) -> bool:
-	if _budget() < amount:
-		_say("Not enough military budget (need %d)" % amount)
-		return false
-	EventBus.emit_event(&"resource_change_requested", {"key": BUDGET_KEY, "amount": -amount, "reason": reason})
-	return true
+	return _camp.defense_rules.check_place(TOWER_TYPE, pos).is_empty()
 
 
 func _start_placing() -> void:
@@ -157,26 +150,12 @@ func _on_click(screen_pos: Vector2) -> void:
 		var hit: Node3D = _camp.map.occupant_at(point)
 		_select(hit if hit != null and hit.is_in_group(&"towers") else null)
 		return
-	var pos := BuildGrid.snap(point)
-	if not _camp.map.is_buildable(pos, Tower.RADIUS):
-		_say("Can't build there")
+	var problem: String = _camp.defense_rules.place(TOWER_TYPE, BuildGrid.snap(point))
+	if not problem.is_empty():
+		_say(problem)
 		return
-	if not _spend(_build_cost(), TOWER_TYPE):
-		return
-	_place_tower(pos)
 	if not Input.is_key_pressed(KEY_SHIFT):
 		_cancel()
-
-
-func _place_tower(pos: Vector3) -> Node3D:
-	var tower := TowerScene.instantiate()
-	_camp.towers.add_child(tower)
-	tower.global_position = pos
-	_camp.map.occupy(tower, Vector2(Tower.RADIUS, Tower.RADIUS))
-	# Drop in with a bounce.
-	tower.scale = Vector3(1.3, 0.4, 1.3)
-	tower.create_tween().tween_property(tower, "scale", Vector3.ONE, 0.4).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
-	return tower
 
 
 func _select(tower: Node3D) -> void:
@@ -195,14 +174,18 @@ func _upgrade_selected() -> void:
 		_say("Already maxed out")
 		return
 	var next: Dictionary = TowerTypes.tier(TOWER_TYPE, _selected.tier + 1)
-	if _spend(next["cost"], "%s upgrade" % TOWER_TYPE):
-		_selected.upgrade()
-		_say("Upgraded to %s!" % next["label"])
+	var problem: String = _camp.defense_rules.upgrade(_selected.defense_id)
+	_say(problem if not problem.is_empty() else "Upgraded to %s!" % next["label"])
 
 
 func _start_wave() -> void:
-	if not _camp.spawner.start_wave():
-		_say("A wave is already coming" if _camp.spawner.is_active else "Only the host starts waves")
+	if _camp.spawner.is_active:
+		_say("A wave is already coming")
+	elif not CampState.is_authority():
+		EventBus.emit_event(&"wave_start_requested", {})
+		_say("Calling the horde...")
+	else:
+		_camp.spawner.start_wave()
 
 
 func _toggle_grid() -> void:

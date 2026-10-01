@@ -6,8 +6,14 @@ extends CharacterBody3D
 ## `controlled` = this character takes the keyboard (the camp decides which one).
 ## `input_enabled` = false while its player is inside a role view.
 ## `move_override` = world-space XZ direction for tests/bots (overrides keys).
+##
+## Online: `owner_peer` is the peer playing this role (0 = nobody). The owner
+## simulates the character and sends its state to everyone ~20 times a second;
+## on other peers it's a puppet that glides to the last state it got.
 
 const CharacterLook := preload("res://world/players/character_look.gd")
+
+const SYNC_INTERVAL := 0.05
 
 @export var role := "military"
 @export var walk_speed := 5.0
@@ -24,12 +30,24 @@ var input_enabled := true
 var move_override := Vector3.ZERO
 ## Camera yaw (radians), so "forward" means away from the camera.
 var camera_yaw := 0.0
+var owner_peer := 0
 
 var look: Node3D
 var _tag: Label3D
 var _walk_phase := 0.0
 var _was_on_floor := true
 var _jump_queued := false
+var _sync_timer := 0.0
+var _net_position := Vector3.ZERO
+var _net_rotation := 0.0
+var _net_velocity := Vector3.ZERO
+var _net_on_floor := true
+var _has_net_state := false
+
+
+## True if another peer drives this character and we only show it.
+func is_puppet() -> bool:
+	return Net.is_online() and owner_peer != 0 and owner_peer != multiplayer.get_unique_id()
 
 
 func _ready() -> void:
@@ -65,6 +83,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if is_puppet():
+		_follow_net_state(delta)
+		return
 	var move := move_override
 	var sprinting := false
 	if move == Vector3.ZERO and controlled and input_enabled:
@@ -87,7 +108,40 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	if move.length() > 0.05:
 		rotation.y = lerp_angle(rotation.y, atan2(-move.x, -move.z), 1.0 - exp(-10.0 * delta))
-	_animate(delta, Vector2(velocity.x, velocity.z).length())
+	_animate(delta, Vector2(velocity.x, velocity.z).length(), is_on_floor())
+	_send_state(delta)
+
+
+## Owner: tell everyone where we are.
+func _send_state(delta: float) -> void:
+	if not Net.is_online() or owner_peer != multiplayer.get_unique_id():
+		return
+	_sync_timer -= delta
+	if _sync_timer > 0.0:
+		return
+	_sync_timer = SYNC_INTERVAL
+	_receive_state.rpc(global_position, rotation.y, velocity, is_on_floor())
+
+
+@rpc("any_peer", "call_remote", "unreliable_ordered")
+func _receive_state(pos: Vector3, rot_y: float, vel: Vector3, on_floor: bool) -> void:
+	if multiplayer.get_remote_sender_id() != owner_peer:
+		return
+	_net_position = pos
+	_net_rotation = rot_y
+	_net_velocity = vel
+	_net_on_floor = on_floor
+	_has_net_state = true
+
+
+## Puppet: glide toward the owner's last state and animate from its velocity.
+func _follow_net_state(delta: float) -> void:
+	if not _has_net_state:
+		return
+	var blend := 1.0 - exp(-15.0 * delta)
+	global_position = global_position.lerp(_net_position + _net_velocity * SYNC_INTERVAL * 0.5, blend)
+	rotation.y = lerp_angle(rotation.y, _net_rotation, blend)
+	_animate(delta, Vector2(_net_velocity.x, _net_velocity.z).length(), _net_on_floor)
 
 
 func _key_direction() -> Vector3:
@@ -105,9 +159,9 @@ func _key_direction() -> Vector3:
 	return right * input.x - forward * input.y
 
 
-func _animate(delta: float, ground_speed: float) -> void:
+func _animate(delta: float, ground_speed: float, on_floor: bool) -> void:
 	var body: Node3D = look.body
-	var moving := ground_speed > 0.3 and is_on_floor()
+	var moving := ground_speed > 0.3 and on_floor
 	if moving:
 		_walk_phase += delta * ground_speed * 2.2
 	# Bounce, lean and waddle while walking; settle when idle.
@@ -117,13 +171,13 @@ func _animate(delta: float, ground_speed: float) -> void:
 	body.rotation.x = lerpf(body.rotation.x, -minf(ground_speed / sprint_speed, 1.0) * 0.25, 1.0 - exp(-8.0 * delta))
 	for i in look.arms.size():
 		var swing := sin(_walk_phase + PI * i) * 0.9 if moving else 0.0
-		if not is_on_floor():
+		if not on_floor:
 			swing = -2.6  # arms up while airborne
 		look.arms[i].rotation.x = lerpf(look.arms[i].rotation.x, swing, 1.0 - exp(-12.0 * delta))
 	for i in look.feet.size():
 		look.feet[i].position.z = sin(_walk_phase + PI * i) * 0.22 if moving else 0.0
 	# Squash on landing.
-	if is_on_floor() and not _was_on_floor:
+	if on_floor and not _was_on_floor:
 		look.scale = Vector3(1.25, 0.7, 1.25)
 		create_tween().tween_property(look, "scale", Vector3.ONE, 0.3).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
-	_was_on_floor = is_on_floor()
+	_was_on_floor = on_floor

@@ -31,6 +31,7 @@ var _killed := 0
 var _breached := 0
 var _health_scale := 1.0
 var _timer := 0.0
+var _next_zombie_id := 1
 
 
 func _ready() -> void:
@@ -38,11 +39,30 @@ func _ready() -> void:
 		map = get_tree().get_first_node_in_group(&"camp_map")
 	EventBus.subscribe(&"day_phase_changed", _on_day_phase_changed)
 	EventBus.subscribe(&"citizen_turned", _on_citizen_turned)
+	EventBus.subscribe(&"wave_start_requested", _on_wave_start_requested)
+	# Clients don't spawn anything; they show the host's wave from camp state.
+	CampState.value_changed.connect(func(key: String, _o: Variant, _n: Variant) -> void:
+		if key.begins_with("wave."):
+			_read_wave_state())
+	CampState.state_reset.connect(_read_wave_state)
+	_read_wave_state()
 
 
 func _exit_tree() -> void:
 	EventBus.unsubscribe(&"day_phase_changed", _on_day_phase_changed)
 	EventBus.unsubscribe(&"citizen_turned", _on_citizen_turned)
+	EventBus.unsubscribe(&"wave_start_requested", _on_wave_start_requested)
+
+
+func _on_wave_start_requested(_payload: Dictionary) -> void:
+	start_wave()
+
+
+func _read_wave_state() -> void:
+	if CampState.is_authority():
+		return
+	wave = CampState.get_value("wave.number", 0)
+	is_active = CampState.get_value("wave.active", false)
 
 
 ## Spawn a zombie inside the camp, next to a house (or near the heart if there are none).
@@ -89,8 +109,11 @@ static func wave_size(wave_number: int, day: int) -> int:
 	return 5 + 3 * (wave_number - 1) + 2 * (day - 1)
 
 
-## Zombies still to come this wave (alive + not spawned yet).
+## Zombies still to come this wave (alive + not spawned yet). On clients: the
+## zombies we can see.
 func remaining() -> int:
+	if not CampState.is_authority():
+		return get_tree().get_nodes_in_group(&"zombies").size()
 	return alive + _to_spawn
 
 
@@ -106,13 +129,15 @@ func start_wave() -> bool:
 	_breached = 0
 	_health_scale = 1.0 + 0.2 * (wave - 1)
 	_timer = 0.0
+	CampState.set_value("wave.number", wave)
+	CampState.set_value("wave.active", true)
 	EventBus.emit_event(&"wave_started", {"wave": wave, "count": _to_spawn, "day": day})
 	wave_started.emit(wave, _to_spawn)
 	return true
 
 
 func _physics_process(delta: float) -> void:
-	if not is_active:
+	if not is_active or not CampState.is_authority():
 		return
 	if _to_spawn > 0:
 		_timer -= delta
@@ -136,6 +161,8 @@ func _spawn_one() -> void:
 
 func _make_zombie(pos: Vector3, health: float) -> Node3D:
 	var zombie := ZombieScene.instantiate()
+	zombie.zombie_id = _next_zombie_id
+	_next_zombie_id += 1
 	zombie.max_health = health
 	zombie.speed = randf_range(1.7, 2.3) * _virus("speed")
 	zombie.target = map.camp_center()
@@ -162,5 +189,6 @@ func _breach(_zombie: Node3D) -> void:
 
 func _end_wave() -> void:
 	is_active = false
+	CampState.set_value("wave.active", false)
 	EventBus.emit_event(&"wave_ended", {"wave": wave, "killed": _killed, "breached": _breached})
 	wave_ended.emit(wave, _killed, _breached)

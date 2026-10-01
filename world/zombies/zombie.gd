@@ -30,6 +30,13 @@ static var attack_chance := 0.35
 
 var health := 0.0
 var target := Vector3.ZERO
+## Unique per run (set by the wave spawner), so clients can match their copies.
+var zombie_id := -1
+## A client-side copy of the host's zombie (world/zombies/zombie_sync.gd):
+## no AI, no damage, it just glides to `net_position`.
+var is_puppet := false
+var net_position := Vector3.ZERO
+var net_rotation := 0.0
 
 var _visual: Node3D
 var _flash_materials: Array[StandardMaterial3D] = []
@@ -51,6 +58,14 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if is_puppet:
+		var blend := 1.0 - exp(-10.0 * delta)
+		var before := global_position
+		global_position = global_position.lerp(net_position, blend)
+		rotation.y = lerp_angle(rotation.y, net_rotation, blend)
+		_wobble += delta * (before.distance_to(global_position) / maxf(delta, 0.001)) * 3.0
+		_visual.rotation.z = sin(_wobble) * 0.18
+		return
 	if NavigationServer3D.map_get_iteration_id(agent.get_navigation_map()) == 0:
 		return
 	if remaining_distance() < arrive_distance:
@@ -131,18 +146,27 @@ func remaining_distance() -> float:
 
 
 func take_damage(amount: float) -> void:
+	if is_puppet:
+		_hit_feedback()  # cosmetic shots on clients
+		return
 	if health <= 0.0:
 		return
 	health -= amount
 	if health <= 0.0:
 		died.emit(self)
-		var pop := GorePop.new()
-		get_parent().add_child(pop)
-		pop.global_position = global_position
-		pop.burst(SKIN)
-		queue_free()
+		EventBus.emit_event(&"zombie_died", {"zombie_id": zombie_id, "position": global_position})
+		pop()
 		return
 	_hit_feedback()
+
+
+## Burst into chunks and disappear.
+func pop() -> void:
+	var gore := GorePop.new()
+	get_parent().add_child(gore)
+	gore.global_position = global_position
+	gore.burst(SKIN)
+	queue_free()
 
 
 func _hit_feedback() -> void:

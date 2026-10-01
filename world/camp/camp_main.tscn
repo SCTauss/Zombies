@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://world/camp/camp_main.gd" id="1_camp"]
 [ext_resource type="PackedScene" path="res://world/camp_greybox.tscn" id="2_map"]
@@ -7,6 +7,9 @@
 [ext_resource type="Script" path="res://roles/labor/building_layer.gd" id="5_buildings"]
 [ext_resource type="Script" path="res://roles/labor/construction.gd" id="6_construction"]
 [ext_resource type="Script" path="res://world/zombies/wave_spawner.gd" id="7_spawner"]
+[ext_resource type="Script" path="res://roles/military/tower_layer.gd" id="8_towers"]
+[ext_resource type="Script" path="res://roles/military/defense_rules.gd" id="9_rules"]
+[ext_resource type="Script" path="res://world/zombies/zombie_sync.gd" id="10_sync"]
 
 [node name="CampMain" type="Node3D"]
 script = ExtResource("1_camp")
@@ -28,7 +31,14 @@ script = ExtResource("6_construction")
 [node name="WaveSpawner" type="Node3D" parent="."]
 script = ExtResource("7_spawner")
 
+[node name="ZombieSync" type="Node3D" parent="."]
+script = ExtResource("10_sync")
+
 [node name="Towers" type="Node3D" parent="."]
+script = ExtResource("8_towers")
+
+[node name="DefenseRules" type="Node" parent="."]
+script = ExtResource("9_rules")
 
 [node name="Stations" type="Node3D" parent="."]
 
