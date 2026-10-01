@@ -12,6 +12,12 @@ Template:
 - Questions for owner:
 ```
 
+## 2026-10-01 (Lane A's agent, session 4)
+- Done: `ui/main_menu.tscn` main menu + lobby on the Net session API: name, Play solo, Host,
+  Join (IP), Quit; lobby with four role cards (take / give up), player list, local IP + port hint,
+  START for the host; everyone loads the camp on `run_started`.
+- Tests: `tests/b/menu_smoke.tscn`.
+
 ## 2026-10-01 (Lane A's agent, session 3)
 - Done: Politician office `roles/politician/politician_view.tscn` (+ `politician_main.tscn`):
   tabs Inbox (sign/reject documents with effects shown), Budget (draft then apply a split of the
