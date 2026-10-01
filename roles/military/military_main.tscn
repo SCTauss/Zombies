@@ -1,0 +1,19 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://roles/military/military_main.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://world/camp_greybox.tscn" id="2_map"]
+[ext_resource type="PackedScene" path="res://world/camera/top_down_camera.tscn" id="3_cam"]
+[ext_resource type="Script" path="res://world/zombies/wave_spawner.gd" id="4_spawner"]
+
+[node name="MilitaryMain" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="CampGreybox" parent="." instance=ExtResource("2_map")]
+
+[node name="CameraRig" parent="." instance=ExtResource("3_cam")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+
+[node name="WaveSpawner" type="Node3D" parent="."]
+script = ExtResource("4_spawner")
+
+[node name="Towers" type="Node3D" parent="."]
