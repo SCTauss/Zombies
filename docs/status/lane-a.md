@@ -12,6 +12,16 @@ Template:
 - Questions for owner:
 ```
 
+## 2026-10-01 (session 2)
+- Done: networking spike. `Net` autoload (PROTOTYPE): ENet listen-server, host = authority,
+  snapshot on join + per-key state sync, host→client event relay, client→host `*_requested`
+  events (host adds `peer_id`). Two-process test `tests/a/net_smoke.tscn` passes on localhost.
+  Manual test: `core/dev/net_spike.tscn`. Findings + O-03 recommendation: `core/net/SPIKE_REPORT.md`.
+- In progress (branch / PR): `lane-a/net-spike` (stacked on `lane-a/foundation`, PR #1).
+- Next: Phase 0 sync point, then Phase 1 (TD greybox, Labor placement, greybox map + zombie).
+- Needs from Lane B: sim must validate `*_requested` payloads before applying (host-side).
+- Questions for owner: O-03, see the report. A real two-PC test needs port forwarding or Tailscale.
+
 ## 2026-10-01 (session 1)
 - Done: `project.godot` (Godot 4.7.2, GDScript, Forward+). `core/` autoloads:
   `EventBus` (named events + Dictionary payloads), `CampState` (flat keys from
