@@ -76,6 +76,12 @@ func _run() -> void:
 	camp.views["politician"].exit_requested.emit()
 	_check(camp.active_view == "", "office closed")
 
+	# Esc menu: freezes your character while open.
+	camp._toggle_pause()
+	_check(camp._pause.visible and not camp.players["politician"].input_enabled, "menu open, walking off")
+	camp._toggle_pause()
+	_check(not camp._pause.visible and camp.players["politician"].input_enabled, "menu closed, walking on")
+
 	# Labor's workers panel: a job change goes to sim.
 	var WorkersPanel := load("res://roles/labor/workers_panel.gd")
 	var citizen: Dictionary = CampState.get_value("citizens")[0]
