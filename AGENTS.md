@@ -83,6 +83,10 @@ open an issue (§5) and build against a stub or mock until it lands.
 - Keep PRs small and frequent: one feature or fix each. Large PRs lead to conflicts.
 - Before opening a PR, run `git fetch && git rebase origin/main`. Fix anything
   that breaks.
+- CI (`.github/workflows/tests.yml`) runs every `tests/<lane>/*_smoke.tscn`
+  headless on each PR. Keep it green. A test scene exits 0 on success and 1 on
+  failure; scenes named `net_*` run as a host/client pair (`-- --role=host|client`).
+  Run the same thing locally: `GODOT=godot bash .github/scripts/run_godot_tests.sh`.
 - Never force-push `main`. Never rewrite another lane's history.
 - Commit messages start with the lane: `A: add wave spawner`, `B: policy cards
   draft`, `shared: add event survivor_admitted`.
@@ -183,4 +187,5 @@ a flag, or as two prototypes) and keep going. Don't sit idle.
 - Talks to other systems **only through the contracts** (events and camp
   state), never by reaching into the other lane's nodes or scripts.
 - Has no editor errors or warnings in your own files.
+- Has a smoke test in `tests/<lane>/` when the logic can be checked headless, and CI passes.
 - Has a short note in your status file. Update your role doc if the design changed.
