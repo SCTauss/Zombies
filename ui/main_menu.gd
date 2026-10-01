@@ -48,6 +48,8 @@ func _ready() -> void:
 	_show_menu("")
 	if Net.is_online():  # came back from a run while still connected
 		_show_lobby()
+	elif OS.get_cmdline_user_args().has("--solo"):  # dev shortcut: BrainDrain.exe -- --solo
+		play_solo.call_deferred()
 
 
 ## Dev / screenshot helper: host and take a role to show the lobby.
