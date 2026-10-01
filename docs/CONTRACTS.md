@@ -34,14 +34,38 @@ To add an event or key, edit **your own lane's file** in a `shared/` PR.
 
 ## Role entry points
 
-Each role exposes one entry scene, which the camp (Lane A) loads:
+Per H-009, players walk around one shared 3D camp as characters. Each role
+has a **station** in the camp. Interacting with it opens that role's **view**
+(the "inside" game: tower defense, building, desk...). Leaving the view
+returns the player to walking.
 
-| Role | Entry scene | Owner |
-|------|-------------|-------|
-| Military | `roles/military/military_main.tscn` | A |
-| Labor | `roles/labor/labor_main.tscn` | A |
-| Politician | `roles/politician/politician_main.tscn` | B |
-| Medic | `roles/medic/medic_main.tscn` | B |
+Each role exposes two scenes:
+
+| Role | View (loaded by the camp) | Standalone (F6, mock world) | Owner |
+|------|---------------------------|-----------------------------|-------|
+| Military | `roles/military/military_view.tscn` | `roles/military/military_main.tscn` | A |
+| Labor | `roles/labor/labor_view.tscn` | `roles/labor/labor_main.tscn` | A |
+| Politician | `roles/politician/politician_view.tscn` | `roles/politician/politician_main.tscn` | B |
+| Medic | `roles/medic/medic_view.tscn` | `roles/medic/medic_main.tscn` | B |
+
+**View contract.** The view scene's root node implements:
+
+```gdscript
+signal exit_requested          # the player wants to leave the view (Esc, a "Leave" button)
+func open_view(camp: Node) -> void   # called when the player enters; show UI, take input
+func close_view() -> void            # called when the player leaves; hide UI, stop taking input
+```
+
+- The camp keeps every view loaded and calls `open_view` / `close_view`, so a
+  view keeps its own state between visits. Views must ignore input while closed.
+- `camp` is the camp scene root (`world/camp/camp_main.gd`). World views
+  (Military, Labor) use `camp.map`, `camp.top_down_camera()`, `camp.buildings`,
+  `camp.spawner`. Desk views (Politician, Medic) can ignore it and draw 2D UI on
+  their own `CanvasLayer`.
+- A view never moves the player or edits the camp scene; it talks to the rest
+  of the game only through events and camp state.
+- The standalone `<role>_main.tscn` wraps the view with a mock world and opens it
+  right away, so each role still runs alone (F6).
 
 ## Camp state: draft keys
 
@@ -100,3 +124,4 @@ Append-only. Format: `YYYY-MM-DD, lane, change, issue link`.
 
 - 2026-10-01, owner, initial draft.
 - 2026-10-01, A, contracts in code (`contracts/`); payload keys listed per event; added state key `citizens` (citizen records) and the shared `events_shared.gd`.
+- 2026-10-01, owner (H-009), role views opened from camp stations; view contract (`open_view` / `close_view` / `exit_requested`); Labor request events `building_placement_requested`, `building_demolish_requested`.

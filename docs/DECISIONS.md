@@ -18,6 +18,7 @@ record *lane-internal* decisions (see `AGENTS.md` §6). Big ones are
 | H-006 | 2026-10-01 | Language is **GDScript** (closes O-01). |
 | H-007 | 2026-10-01 | Godot version pinned to **4.7.2 stable** (closes O-02). |
 | H-008 | 2026-10-01 | Art style and tone: **friendslop, brutal cartoon, like PEAK**. Bright toon colors with outlines, goofy characters, over-the-top cartoon gore (closes O-09). |
+| H-009 | 2026-10-01 | Presence: there are **4 player characters, one per role**, who **walk around the one shared 3D camp** (third person). Each role has a station; pressing the interact button there switches to that role's **"inside" view** (tower defense, building, desk...). See the view contract in `CONTRACTS.md` (closes O-05). |
 
 ## Open (owner decides)
 
@@ -29,7 +30,7 @@ When one is settled, add an `H-xxx` row above and mark it **Closed → H-xxx** h
 | O-02 | **Closed → H-007.** **Exact Godot version** to pin (e.g. 4.7.x) | Phase 0 (blocking) | Everyone must use the same version, or scenes churn. |
 | O-03 | **Networking model:** listen-server (one player hosts), dedicated server, or Steam relay? Authority model? | End of Phase 0 (after the spike) | Lane A's spike recommends; the owner decides. |
 | O-04 | **Time model:** real-time days, turn-based phases, or a hybrid? | End of Phase 1 | Affects every role's pace. |
-| O-05 | **Camera / presence:** do players walk around one shared 3D camp, or does each role have its own view? Camera per role? | End of Phase 1 | |
+| O-05 | **Closed → H-009.** **Camera / presence:** do players walk around one shared 3D camp, or does each role have its own view? Camera per role? | End of Phase 1 | |
 | O-06 | **Empty roles** with fewer than 4 players: automatic rules, one player with several roles, scaling, or AI advisors? | End of Phase 2 | |
 | O-07 | **Test framework** (e.g. GUT, gdUnit4, or none for now) | Phase 0 | It's an addon, so it's the owner's call. |
 | O-08 | **Win/lose conditions:** survive N days, cure, evacuation, faction victory, endless? | Phase 5 | |
