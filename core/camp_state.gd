@@ -9,19 +9,32 @@ extends Node
 ##
 ## Only the authority writes. Non-authority code sends request events
 ## (e.g. `resource_change_requested`) through EventBus instead.
+##
+## Arrays and Dictionaries come back by reference from get_value(): never
+## change them in place (nothing would sync). Use get_copy(), change the copy,
+## then set_value() it.
+##
+## Keys are declared per lane in `res://contracts/state_<lane>.gd`
+## (`const KEYS`, a key ending in "." is a prefix). Writing an undeclared key
+## logs a warning once.
 
 signal value_changed(key: String, old_value: Variant, new_value: Variant)
 signal state_reset
 
 const MockCamp := preload("res://core/mock_camp.gd")
+const CONTRACTS_DIR := "res://contracts"
 
 ## True while running on mock data (role scenes started on their own with F6).
 var is_mock := false
 
 var _state: Dictionary = {}
+var _declared_keys: Dictionary = {}  # exact key -> true
+var _declared_prefixes: Array[String] = []
+var _warned: Dictionary = {}
 
 
 func _ready() -> void:
+	_load_declarations()
 	# Until a real run starts, every scene gets mock state so it runs alone.
 	load_mock()
 
@@ -36,8 +49,26 @@ func get_value(key: String, default: Variant = null) -> Variant:
 	return _state.get(key, default)
 
 
+## Like get_value(), but Arrays and Dictionaries come back as deep copies,
+## safe to change before passing to set_value().
+func get_copy(key: String, default: Variant = null) -> Variant:
+	var value: Variant = _state.get(key, default)
+	if value is Array or value is Dictionary:
+		return value.duplicate(true)
+	return value
+
+
 func has_value(key: String) -> bool:
 	return _state.has(key)
+
+
+func is_declared(key: String) -> bool:
+	if _declared_keys.has(key):
+		return true
+	for prefix in _declared_prefixes:
+		if key.begins_with(prefix):
+			return true
+	return false
 
 
 ## Set a value. Returns false (and changes nothing) if we're not the authority.
@@ -45,6 +76,7 @@ func set_value(key: String, value: Variant) -> bool:
 	if not is_authority():
 		push_error("CampState: '%s' written by a non-authority peer; send a request event instead" % key)
 		return false
+	_check_declared(key)
 	var old: Variant = _state.get(key)
 	if _state.has(key) and typeof(old) == typeof(value) and old == value:
 		return true
@@ -91,3 +123,31 @@ func load_snapshot(data: Dictionary, mock := false) -> void:
 
 func load_mock() -> void:
 	load_snapshot(MockCamp.create_state(), true)
+
+
+func _check_declared(key: String) -> void:
+	if _warned.has(key) or (_declared_keys.is_empty() and _declared_prefixes.is_empty()) or is_declared(key):
+		return
+	_warned[key] = true
+	push_warning("CampState: key '%s' is not declared in %s/state_*.gd" % [key, CONTRACTS_DIR])
+
+
+func _load_declarations() -> void:
+	var dir := DirAccess.open(CONTRACTS_DIR)
+	if dir == null:
+		return
+	for file_name in dir.get_files():
+		file_name = file_name.trim_suffix(".remap")
+		if not (file_name.begins_with("state_") and file_name.ends_with(".gd")):
+			continue
+		var path := CONTRACTS_DIR.path_join(file_name)
+		var script := load(path) as Script
+		var constants := script.get_script_constant_map() if script else {}
+		if not constants.has("KEYS"):
+			push_error("CampState: %s has no KEYS constant" % path)
+			continue
+		for key: String in constants["KEYS"]:
+			if key.ends_with("."):
+				_declared_prefixes.append(key)
+			else:
+				_declared_keys[key] = true

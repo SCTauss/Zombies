@@ -20,6 +20,7 @@ static func create_state() -> Dictionary:
 		"res.ammo": 200,
 		"res.fuel": 30,
 		"population": 12,
+		"citizens": [],
 		"approval": 0.6,
 		"infection.level": 0.0,
 		"policies.active": [],
