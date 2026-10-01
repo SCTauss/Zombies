@@ -12,6 +12,17 @@ Template:
 - Questions for owner:
 ```
 
+## 2026-10-01 (session 5)
+- Done: H-009 shared camp (`world/camp/camp_main.tscn`, now the main scene). 4 cartoon "bean"
+  characters (one per role, `world/players/`), third-person follow camera, 4 stations
+  (`world/stations/`). E at your own station opens your role view; Esc / Leave returns.
+  Tab switches character (solo). Day/night runs in real time (F1 skips a phase).
+- Military and Labor split into `<role>_view.tscn` (view contract) + `<role>_main.tscn`
+  (standalone, extends `world/camp/camp_base.gd`). Night waves moved into the wave spawner.
+- Tests: `tests/a/camp_smoke.tscn`.
+- Needs from Lane B: `politician_view.tscn` / `medic_view.tscn` per the view contract; the camp
+  loads them automatically when they exist.
+
 ## 2026-10-01 (session 4)
 - Done: merged #1–#7 (owner OK'd Lane A merging its own PRs). CI added (#5). Contracts in code (#6).
   CampState checks keys against `contracts/state_*.gd` (#7).

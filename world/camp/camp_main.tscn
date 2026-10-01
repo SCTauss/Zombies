@@ -1,0 +1,37 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://world/camp/camp_main.gd" id="1_camp"]
+[ext_resource type="PackedScene" path="res://world/camp_greybox.tscn" id="2_map"]
+[ext_resource type="PackedScene" path="res://world/camera/top_down_camera.tscn" id="3_top"]
+[ext_resource type="Script" path="res://world/camera/follow_camera.gd" id="4_follow"]
+[ext_resource type="Script" path="res://roles/labor/building_layer.gd" id="5_buildings"]
+[ext_resource type="Script" path="res://roles/labor/construction.gd" id="6_construction"]
+[ext_resource type="Script" path="res://world/zombies/wave_spawner.gd" id="7_spawner"]
+
+[node name="CampMain" type="Node3D"]
+script = ExtResource("1_camp")
+
+[node name="CampGreybox" parent="." instance=ExtResource("2_map")]
+
+[node name="CameraRig" parent="." instance=ExtResource("3_top")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+
+[node name="FollowCamera" type="Node3D" parent="."]
+script = ExtResource("4_follow")
+
+[node name="Buildings" type="Node3D" parent="."]
+script = ExtResource("5_buildings")
+
+[node name="Construction" type="Node" parent="."]
+script = ExtResource("6_construction")
+
+[node name="WaveSpawner" type="Node3D" parent="."]
+script = ExtResource("7_spawner")
+
+[node name="Towers" type="Node3D" parent="."]
+
+[node name="Stations" type="Node3D" parent="."]
+
+[node name="Players" type="Node3D" parent="."]
+
+[node name="Views" type="Node" parent="."]

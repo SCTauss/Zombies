@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://roles/military/military_main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://world/camp_greybox.tscn" id="2_map"]
 [ext_resource type="PackedScene" path="res://world/camera/top_down_camera.tscn" id="3_cam"]
 [ext_resource type="Script" path="res://world/zombies/wave_spawner.gd" id="4_spawner"]
 [ext_resource type="Script" path="res://roles/labor/building_layer.gd" id="5_buildings"]
+[ext_resource type="PackedScene" path="res://roles/military/military_view.tscn" id="6_view"]
 
 [node name="MilitaryMain" type="Node3D"]
 script = ExtResource("1_main")
@@ -21,3 +22,5 @@ script = ExtResource("4_spawner")
 script = ExtResource("5_buildings")
 
 [node name="Towers" type="Node3D" parent="."]
+
+[node name="MilitaryView" parent="." instance=ExtResource("6_view")]
