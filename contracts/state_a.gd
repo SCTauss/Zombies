@@ -9,4 +9,6 @@ const KEYS: Array[String] = [
 	"buildings",  # Array of building records (contracts/records.gd)
 	"capacity.",  # capacity.housing, capacity.beds, capacity.labs, ... (ints, derived from buildings)
 	"blueprints.known",  # Array of blueprint ids
+	"defenses",  # Array of defense records (contracts/records.gd): Military's towers
+	"wave.",  # wave.number (int), wave.active (bool): the current zombie wave
 ]

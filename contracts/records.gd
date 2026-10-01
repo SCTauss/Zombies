@@ -41,6 +41,16 @@ static func building(id: int, type: String, position: Vector3) -> Dictionary:
 	}
 
 
+## Defense record (owned by Military, Lane A). Stored in CampState "defenses".
+static func defense(id: int, type: String, position: Vector3) -> Dictionary:
+	return {
+		"id": id,
+		"type": type,  # defense type id, e.g. "watchtower"
+		"tier": 0,  # upgrade tier, 0 = base
+		"position": position,
+	}
+
+
 ## Document record (owned by sim/, Lane B). Stored in CampState "documents.inbox"
 ## until the Politician signs or rejects it.
 static func document(id: int, kind: String, from_role: String, title: String) -> Dictionary:
