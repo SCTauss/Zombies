@@ -22,8 +22,8 @@ The project is split into two **lanes**. Each agent owns exactly one.
 
 | Lane | Agent |
 |------|-------|
-| A | _unassigned: owner fills in_ |
-| B | _unassigned: owner fills in_ |
+| A | The owner's second AI agent |
+| B | Claude Code |
 
 If this table is still unassigned, **ask the owner which lane you are** before writing code.
 
