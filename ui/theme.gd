@@ -42,6 +42,11 @@ static func cartoon() -> Theme:
 	theme.set_color("font_color", "ProgressBar", INK)
 
 	theme.set_stylebox("normal", "LineEdit", box(Color.WHITE, 3, 8, 0))
+	theme.set_stylebox("focus", "LineEdit", box(Color(1.0, 0.98, 0.85), 3, 8, 0))
+	theme.set_color("font_color", "LineEdit", INK)
+	theme.set_color("font_placeholder_color", "LineEdit", Color(0.55, 0.52, 0.50))
+	theme.set_color("caret_color", "LineEdit", INK)
+	theme.set_font_size("font_size", "LineEdit", 22)
 	theme.set_stylebox("slider", "HSlider", box(PAPER_DARK, 2, 6, 0))
 	_cached = theme
 	return theme
