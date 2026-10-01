@@ -7,11 +7,15 @@ extends "res://world/camp/camp_base.gd"
 ## Online (Net session): you control your lobby role's character; the others
 ## are driven by their players, or stand at their stations if nobody has them.
 ## No role online = spectator (camera only).
+## Esc while walking = menu panel (back to the camp / leave to the main menu).
 ## F1 = skip to the next day phase (dev, host/solo only).
 
 const PlayerScene := preload("res://world/players/player.tscn")
 const StationScript := preload("res://world/stations/station.gd")
 const CharacterLook := preload("res://world/players/character_look.gd")
+const UITheme := preload("res://ui/theme.gd")
+
+const MENU_SCENE := "res://ui/main_menu.tscn"
 
 const ROLES: Array[String] = ["politician", "military", "medic", "labor"]
 const STATION_SPOTS := {
@@ -42,6 +46,8 @@ var _resources: Label
 var _prompt: Label
 var _message: Label
 var _message_time := 0.0
+var _pause: Control
+var _leaving := false
 
 @onready var follow_camera: Node3D = $FollowCamera
 
@@ -62,10 +68,33 @@ func _ready() -> void:
 	map.request_rebake()
 	_build_hud()
 	control(controlled_role)
+	Net.disconnected.connect(_on_disconnected)
 
 
 func _exit_tree() -> void:
 	GameClock.auto_advance = false
+
+
+## Leave the run (and the session, if online) and go back to the main menu.
+func back_to_menu() -> void:
+	if _leaving:
+		return
+	_leaving = true
+	Net.leave()
+	CampState.load_mock()  # a fresh camp for the next run
+	get_tree().change_scene_to_file(MENU_SCENE)
+
+
+## The host left (or we lost the connection): back to the menu.
+func _on_disconnected() -> void:
+	if online and is_inside_tree():
+		back_to_menu()
+
+
+func _toggle_pause() -> void:
+	_pause.visible = not _pause.visible
+	players[controlled_role].input_enabled = not _pause.visible
+	follow_camera.active = not _pause.visible
 
 
 ## Dev / screenshot helper: open the Military view from inside the camp, with towers and a wave.
@@ -138,6 +167,12 @@ func close_view() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if active_view != "" or not (event is InputEventKey and event.pressed and not event.echo):
+		return
+	if event.physical_keycode == KEY_ESCAPE:
+		_toggle_pause()
+		get_viewport().set_input_as_handled()
+		return
+	if _pause.visible:
 		return
 	match event.physical_keycode:
 		KEY_E:
@@ -244,13 +279,42 @@ func _build_hud() -> void:
 	_prompt.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hud.add_child(_prompt)
+	_pause = _build_pause()
+	_hud.add_child(_pause)
 	var hint := _label(18)
-	hint.text = "WASD move · Shift sprint · Space jump · right drag / arrows: camera · E use station · F1 next phase"
+	hint.text = "WASD move · Shift sprint · Space jump · right drag / arrows: camera · E use station · Esc menu"
 	hint.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	hint.position.y -= 40
 	hint.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hud.add_child(hint)
+
+
+func _build_pause() -> Control:
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.theme = UITheme.cartoon()
+	center.visible = false
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(420, 0)
+	center.add_child(panel)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 14)
+	panel.add_child(box)
+	var title := UITheme.label("MENU", 40)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(title)
+	var note := UITheme.label("The camp keeps going while this is open%s." % (" for everyone" if online else ""), 18)
+	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(note)
+	var resume := UITheme.colored_button("Back to the camp [Esc]", UITheme.GOOD, 22)
+	resume.pressed.connect(_toggle_pause)
+	box.add_child(resume)
+	var leave := UITheme.colored_button("Leave to main menu", UITheme.BAD, 22)
+	leave.pressed.connect(back_to_menu)
+	box.add_child(leave)
+	return center
 
 
 func _label(size: int) -> Label:

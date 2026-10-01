@@ -132,5 +132,8 @@ func _finish(ok: bool, reason: String) -> void:
 	_done = true
 	ok = ok and _failures == 0
 	print("net_camp_smoke %s: %s (%s)" % [_role, "OK" if ok else "FAILED", reason])
+	if _camp:
+		_camp._leaving = true  # don't swap to the main menu when we disconnect
+	var tree := get_tree()
 	Net.leave()
-	get_tree().quit(0 if ok else 1)
+	tree.quit(0 if ok else 1)
