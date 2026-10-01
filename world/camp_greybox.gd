@@ -2,15 +2,24 @@ extends Node3D
 ## PROTOTYPE greybox camp map (Phase 1). Built from code so sizes are easy to tweak.
 ##
 ## Flat ground, a square wall with a gate on each side, spawn points near the
-## map edge, and the camp center ("heart") that zombies walk to.
+## map edge, and the camp center ("heart") that zombies walk to. A cross of
+## dirt roads runs from each gate to the heart; nothing can be built on it,
+## so the way in can never be fully blocked.
 ## Also tracks occupied spots, so Military and Labor can't place things on top
 ## of each other or on the walls.
+##
+## Navigation: everything in the NAV_SOURCE_GROUP group (ground, walls, and
+## buildings that add themselves) is baked into the navmesh. Call
+## request_rebake() after adding or removing an obstacle.
 
 signal navigation_ready
+signal navigation_changed
 
 const Toon := preload("res://world/fx/toon.gd")
 
+const NAV_SOURCE_GROUP := &"nav_source"
 const GROUND_COLOR := Color(0.47, 0.72, 0.36)
+const ROAD_COLOR := Color(0.74, 0.60, 0.40)
 const WALL_COLOR := Color(0.80, 0.52, 0.30)
 const HEART_COLOR := Color(1.0, 0.80, 0.20)
 const SKY_COLOR := Color(0.55, 0.80, 0.97)
@@ -29,6 +38,9 @@ var is_navigation_ready := false
 var _wall_rects: Array[Rect2] = []  # XZ footprints
 var _occupied: Array[Dictionary] = []  # {node, pos: Vector2, radius}
 var _spawn_points: Array[Vector3] = []
+var _baking := false
+var _rebake_pending := false
+var _rebake_queued := false
 
 
 func _ready() -> void:
@@ -38,6 +50,8 @@ func _ready() -> void:
 	var nav_mesh := NavigationMesh.new()
 	nav_mesh.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
 	nav_mesh.geometry_collision_mask = 1
+	nav_mesh.geometry_source_geometry_mode = NavigationMesh.SOURCE_GEOMETRY_GROUPS_WITH_CHILDREN
+	nav_mesh.geometry_source_group_name = NAV_SOURCE_GROUP
 	# Multiples of the default cell size/height (0.25) to avoid precision warnings.
 	nav_mesh.agent_radius = 0.5
 	nav_mesh.agent_height = 1.75
@@ -47,11 +61,13 @@ func _ready() -> void:
 	add_child(nav_region)
 
 	_add_box(nav_region, "Ground", Vector3(0, -0.5, 0), Vector3(map_size, 1, map_size), GROUND_COLOR)
+	_build_roads()
 	_build_walls()
 	_build_heart()
 	_build_spawn_points()
 
-	nav_region.bake_finished.connect(_on_bake_finished, CONNECT_ONE_SHOT)
+	nav_region.bake_finished.connect(_on_bake_finished)
+	_baking = true
 	nav_region.bake_navigation_mesh(false)
 
 
@@ -68,25 +84,47 @@ func build_limit() -> float:
 	return map_size / 2.0 - edge_margin
 
 
-func is_buildable(pos: Vector3, radius: float) -> bool:
+## The XZ footprint rectangle of something at `pos` with `half` extents.
+static func footprint(pos: Vector3, half: Vector2) -> Rect2:
+	return Rect2(pos.x - half.x, pos.z - half.y, half.x * 2.0, half.y * 2.0)
+
+
+## True if a footprint with `half` extents at `pos` overlaps the road cross.
+func is_on_road(pos: Vector3, half: Vector2) -> bool:
+	var road := gate_width / 2.0
+	return absf(pos.x) < road + half.x or absf(pos.z) < road + half.y
+
+
+## True if a rectangle with `half` extents (meters, X and Z) fits at `pos`:
+## inside the map, off the roads, the walls, the heart and anything placed.
+func is_area_buildable(pos: Vector3, half: Vector2) -> bool:
 	var limit := build_limit()
-	if absf(pos.x) > limit or absf(pos.z) > limit:
+	if absf(pos.x) + half.x > limit or absf(pos.z) + half.y > limit:
 		return false
-	var p := Vector2(pos.x, pos.z)
-	if p.length() < HEART_RADIUS + radius:
+	if is_on_road(pos, half):
 		return false
-	for rect in _wall_rects:
-		if rect.grow(radius).has_point(p):
+	var rect := footprint(pos, half)
+	# Closest point of the rectangle to the heart.
+	var closest := Vector2(clampf(0.0, rect.position.x, rect.end.x), clampf(0.0, rect.position.y, rect.end.y))
+	if closest.length() < HEART_RADIUS:
+		return false
+	for wall in _wall_rects:
+		if rect.intersects(wall):
 			return false
 	for spot in _occupied:
-		if p.distance_to(spot["pos"]) < radius + spot["radius"]:
+		if rect.intersects(spot["rect"]):
 			return false
 	return true
 
 
-## Mark `node`'s spot as taken. Freed automatically when the node leaves the tree.
-func occupy(node: Node3D, radius: float) -> void:
-	_occupied.append({"node": node, "pos": Vector2(node.global_position.x, node.global_position.z), "radius": radius})
+## Square footprint shortcut (towers).
+func is_buildable(pos: Vector3, radius: float) -> bool:
+	return is_area_buildable(pos, Vector2(radius, radius))
+
+
+## Mark `node`'s footprint as taken. Freed automatically when the node leaves the tree.
+func occupy(node: Node3D, half: Vector2) -> void:
+	_occupied.append({"node": node, "rect": footprint(node.global_position, half)})
 	node.tree_exiting.connect(release.bind(node), CONNECT_ONE_SHOT)
 
 
@@ -94,16 +132,40 @@ func release(node: Node3D) -> void:
 	_occupied = _occupied.filter(func(spot: Dictionary) -> bool: return spot["node"] != node)
 
 
-## The placed node whose spot contains `pos`, or null.
+## The placed node whose footprint contains `pos`, or null.
 func occupant_at(pos: Vector3) -> Node3D:
 	var p := Vector2(pos.x, pos.z)
 	for spot in _occupied:
-		if p.distance_to(spot["pos"]) <= spot["radius"]:
+		if spot["rect"].has_point(p):
 			return spot["node"]
 	return null
 
 
+## Rebake the navmesh soon (batched: many calls in one frame = one bake).
+func request_rebake() -> void:
+	if _rebake_queued:
+		return
+	_rebake_queued = true
+	_start_rebake.call_deferred()
+
+
+func _start_rebake() -> void:
+	_rebake_queued = false
+	if _baking:
+		_rebake_pending = true
+		return
+	_baking = true
+	nav_region.bake_navigation_mesh(true)
+
+
 func _on_bake_finished() -> void:
+	_baking = false
+	if _rebake_pending:
+		_rebake_pending = false
+		request_rebake()
+	if is_navigation_ready:
+		navigation_changed.emit()
+		return
 	# The map syncs asynchronously, and the first sync can still be the empty
 	# region. Wait until a real path query works (a few physics frames).
 	var map_rid := get_world_3d().navigation_map
@@ -186,10 +248,22 @@ func _build_spawn_points() -> void:
 				_spawn_points.append(Vector3(x * d, 0, z * d))
 
 
+func _build_roads() -> void:
+	# Visual only; the rule lives in is_on_road().
+	for along_x in [true, false]:
+		var road := MeshInstance3D.new()
+		road.name = "Road"
+		road.mesh = Toon.box(Vector3(map_size, 0.02, gate_width) if along_x else Vector3(gate_width, 0.02, map_size))
+		road.material_override = Toon.material(ROAD_COLOR, false)
+		road.position = Vector3(0, 0.01 if along_x else 0.012, 0)
+		add_child(road)
+
+
 func _add_box(parent: Node, node_name: String, pos: Vector3, size: Vector3, color: Color) -> StaticBody3D:
 	var body := StaticBody3D.new()
 	body.name = node_name
 	body.position = pos
+	body.add_to_group(NAV_SOURCE_GROUP)
 	var shape := BoxShape3D.new()
 	shape.size = size
 	var collision := CollisionShape3D.new()

@@ -12,6 +12,19 @@ Template:
 - Questions for owner:
 ```
 
+## 2026-10-01 (session 4)
+- Done: merged #1–#7 (owner OK'd Lane A merging its own PRs). CI added (#5). Contracts in code (#6).
+  CampState checks keys against `contracts/state_*.gd` (#7).
+- Done: Phase 1 Labor toy (`roles/labor/`): 6 prefab buildings (house, clinic, lab, workshop, farm,
+  water tower), cartoon models, scaffolding + rise while building, pop on finish. Buildings live in
+  camp state `buildings`; `BuildingLayer` draws them from state (works on clients); `Construction`
+  (authority) places/charges/builds/damages/demolishes and writes `capacity.*`. Footprints are
+  rectangles (rotation aware). Buildings block zombies (navmesh rebakes). Road cross from the gates
+  is unbuildable. Mock camp starts with 7 buildings.
+- Next: owner decision O-05 → 4 walking player characters, role views on interaction (camp scene).
+- Needs from Lane B: requests `building_placement_requested` / `building_demolish_requested` are
+  being added to `contracts/events_a.gd` (shared PR).
+
 ## 2026-10-01 (session 3)
 - Done: Phase 1 Military toy + world greybox.
   - `world/camp_greybox.tscn`: map built from code (ground, square wall with 4 gates, heart,
