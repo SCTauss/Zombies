@@ -10,8 +10,10 @@ signal wave_ended(wave: int, killed: int, breached: int)
 
 const ZombieScene := preload("res://world/zombies/zombie.tscn")
 
-## The camp map (world/camp_greybox.gd). Set before starting a wave.
+## The camp map (world/camp_greybox.gd). Found by group if not set.
 var map: Node3D
+## Start a wave whenever the night phase begins.
+var auto_night_waves := true
 var wave := 0
 var is_active := false
 var spawn_interval := 0.8
@@ -23,6 +25,21 @@ var _killed := 0
 var _breached := 0
 var _health_scale := 1.0
 var _timer := 0.0
+
+
+func _ready() -> void:
+	if map == null:
+		map = get_tree().get_first_node_in_group(&"camp_map")
+	EventBus.subscribe(&"day_phase_changed", _on_day_phase_changed)
+
+
+func _exit_tree() -> void:
+	EventBus.unsubscribe(&"day_phase_changed", _on_day_phase_changed)
+
+
+func _on_day_phase_changed(payload: Dictionary) -> void:
+	if auto_night_waves and payload.get("phase") == "night":
+		start_wave()
 
 
 static func wave_size(wave_number: int, day: int) -> int:

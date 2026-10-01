@@ -9,6 +9,8 @@ extends Node3D
 @export var max_distance := 75.0
 @export var pitch_degrees := 58.0
 @export var bounds := 40.0
+## Pan/zoom only while active (the camp turns it on for world views).
+@export var active := true
 
 @onready var camera: Camera3D = $Camera3D
 
@@ -18,6 +20,8 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if not active:
+		return
 	var dir := Vector2.ZERO
 	if Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT):
 		dir.x -= 1
@@ -35,7 +39,7 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed:
+	if active and event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			distance = maxf(min_distance, distance * 0.9)
 			_apply_zoom()
