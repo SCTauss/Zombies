@@ -147,7 +147,7 @@ func _place_tower(pos: Vector3) -> Node3D:
 	var tower := TowerScene.instantiate()
 	towers.add_child(tower)
 	tower.global_position = pos
-	map.occupy(tower, Tower.RADIUS)
+	map.occupy(tower, Vector2(Tower.RADIUS, Tower.RADIUS))
 	# Drop in with a bounce.
 	tower.scale = Vector3(1.3, 0.4, 1.3)
 	tower.create_tween().tween_property(tower, "scale", Vector3.ONE, 0.4).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
