@@ -48,6 +48,8 @@ var _message: Label
 var _message_time := 0.0
 var _pause: Control
 var _leaving := false
+## The run_ended payload once the run is over, else empty.
+var run_result: Dictionary = {}
 
 @onready var follow_camera: Node3D = $FollowCamera
 
@@ -69,10 +71,26 @@ func _ready() -> void:
 	_build_hud()
 	control(controlled_role)
 	Net.disconnected.connect(_on_disconnected)
+	EventBus.subscribe(&"run_ended", _on_run_ended)
 
 
 func _exit_tree() -> void:
 	GameClock.auto_advance = false
+	EventBus.unsubscribe(&"run_ended", _on_run_ended)
+
+
+## The run is over (sim decides, see O-08): stop the clock and show how it went.
+func _on_run_ended(payload: Dictionary) -> void:
+	if run_result.size() > 0:
+		return
+	run_result = payload
+	close_view()
+	GameClock.auto_advance = false
+	spawner.auto_night_waves = false
+	players[controlled_role].input_enabled = false
+	follow_camera.active = false
+	_pause.visible = false
+	_hud.add_child(_build_end_screen(payload))
 
 
 ## Leave the run (and the session, if online) and go back to the main menu.
@@ -98,7 +116,11 @@ func _toggle_pause() -> void:
 
 
 ## Dev / screenshot helper: open the Military view from inside the camp, with towers and a wave.
+## With the "end" user arg, show the end screen instead.
 func dev_demo() -> void:
+	if OS.get_cmdline_user_args().has("--end"):
+		EventBus.emit_event(&"run_ended", {"reason": "survived", "won": true, "day": 5, "population": 14})
+		return
 	open_view("military")
 	views["military"].dev_demo()
 
@@ -168,6 +190,8 @@ func close_view() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if active_view != "" or not (event is InputEventKey and event.pressed and not event.echo):
 		return
+	if not run_result.is_empty():
+		return
 	if event.physical_keycode == KEY_ESCAPE:
 		_toggle_pause()
 		get_viewport().set_input_as_handled()
@@ -194,7 +218,7 @@ func _process(delta: float) -> void:
 		_message_time -= delta
 		if _message_time <= 0.0:
 			_message.text = ""
-	var near := station_in_range() if active_view == "" else null
+	var near := station_in_range() if active_view == "" and run_result.is_empty() and not spectating else null
 	for station: Node3D in stations.values():
 		station.highlighted = station == near
 	if near == null:
@@ -315,6 +339,48 @@ func _build_pause() -> Control:
 	leave.pressed.connect(back_to_menu)
 	box.add_child(leave)
 	return center
+
+
+func _build_end_screen(result: Dictionary) -> Control:
+	const REASONS := {
+		"survived": "You held out for %d days. The rescue convoy honks outside!",
+		"walls_fell": "The walls came down on day %d. The horde pours in.",
+		"everyone_gone": "By day %d there was nobody left to save.",
+	}
+	var won: bool = result.get("won", false)
+	var shade := ColorRect.new()
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.color = Color(0, 0, 0, 0.45)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.theme = UITheme.cartoon()
+	shade.add_child(center)
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(620, 0)
+	center.add_child(panel)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 14)
+	panel.add_child(box)
+	var title := UITheme.label("YOU SURVIVED!" if won else "THE CAMP FELL", 56, UITheme.GOOD.darkened(0.2) if won else UITheme.BAD)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_constant_override("outline_size", 10)
+	title.add_theme_color_override("font_outline_color", UITheme.INK)
+	box.add_child(title)
+	var story := UITheme.label(REASONS.get(result.get("reason", ""), "The run is over (day %d).") % result.get("day", 1), 22)
+	story.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	story.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(story)
+	var stats := UITheme.label("Survivors: %d   ·   Buildings: %d   ·   Towers: %d   ·   Waves: %d   ·   Treasury: $%d" % [
+		result.get("population", 0), CampState.get_value("buildings", []).size(),
+		CampState.get_value("defenses", []).size(), CampState.get_value("wave.number", 0),
+		CampState.get_value("money", 0)], 18)
+	stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(stats)
+	var again := UITheme.colored_button("Back to main menu", UITheme.BUTTON, 26)
+	again.pressed.connect(back_to_menu)
+	box.add_child(again)
+	return shade
 
 
 func _label(size: int) -> Label:

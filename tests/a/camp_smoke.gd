@@ -89,6 +89,12 @@ func _run() -> void:
 	EventBus.emit_event(&"citizen_job_change_requested", {"citizen_id": citizen["id"], "job": next})
 	_check(CampState.get_value("citizens")[0]["job"] == next, "job changed to %s" % next)
 
+	# Run end: the end screen takes over and the clock stops.
+	EventBus.emit_event(&"run_ended", {"reason": "survived", "won": true, "day": 5, "population": 12})
+	_check(camp.run_result.get("won", false), "camp got the run result")
+	_check(not GameClock.auto_advance, "clock stopped")
+	_check(not camp.players[camp.controlled_role].input_enabled, "walking off on the end screen")
+
 
 func _check(condition: bool, label: String) -> void:
 	if not condition:
