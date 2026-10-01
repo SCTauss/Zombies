@@ -54,6 +54,7 @@ func _ready() -> void:
 		_make_ghostly(_visual)
 		set_valid(true)
 	else:
+		add_to_group(&"building_views")
 		_add_collision(size)
 		_scaffold = _build_scaffold(size)
 		_visual.add_child(_scaffold)
@@ -67,6 +68,19 @@ func type() -> String:
 
 func building_id() -> int:
 	return record.get("id", -1)
+
+
+## XZ footprint on the ground.
+func footprint() -> Rect2:
+	return CampMap.footprint(global_position, BuildingTypes.half_extents(type(), record.get("rotation", 0.0)))
+
+
+## Shake when hit (zombies call this; visual only).
+func shake() -> void:
+	var tween := create_tween()
+	tween.tween_property(_visual, "position:x", 0.12, 0.04)
+	tween.tween_property(_visual, "position:x", -0.12, 0.06)
+	tween.tween_property(_visual, "position:x", 0.0, 0.04)
 
 
 ## Ghost only: green when it can be placed here, red when not.

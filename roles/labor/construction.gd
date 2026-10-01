@@ -19,10 +19,12 @@ var _accum := 0.0
 
 
 func _ready() -> void:
+	add_to_group(&"construction")
 	if map == null:
 		map = get_tree().get_first_node_in_group(&"camp_map")
 	EventBus.subscribe(&"building_placement_requested", _on_placement_requested)
 	EventBus.subscribe(&"building_demolish_requested", _on_demolish_requested)
+	EventBus.subscribe(&"building_repair_requested", _on_repair_requested)
 	if CampState.is_authority():
 		recompute_capacity()
 
@@ -30,6 +32,7 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	EventBus.unsubscribe(&"building_placement_requested", _on_placement_requested)
 	EventBus.unsubscribe(&"building_demolish_requested", _on_demolish_requested)
+	EventBus.unsubscribe(&"building_repair_requested", _on_repair_requested)
 
 
 func _process(delta: float) -> void:
@@ -93,6 +96,41 @@ func demolish(building_id: int) -> void:
 	var materials: int = BuildingTypes.get_type(record["type"])["cost"]["materials"]
 	_request_resource("res.materials", roundi(materials * REFUND), "demolish %s" % record["type"])
 	_remove(building_id, "demolished")
+
+
+## Materials a full repair of `building_id` costs now (0 if undamaged or unknown).
+func repair_cost(building_id: int) -> int:
+	var record := _find(building_id)
+	if record.is_empty():
+		return 0
+	var materials: int = BuildingTypes.get_type(record["type"])["cost"]["materials"]
+	return ceili((1.0 - record["health"]) * materials)
+
+
+## Repair a building back to full health. Returns "" on success (or once the
+## request is sent), else why not.
+func repair(building_id: int) -> String:
+	if not CampState.is_authority():
+		EventBus.emit_event(&"building_repair_requested", {"building_id": building_id})
+		return ""
+	var cost := repair_cost(building_id)
+	if cost <= 0:
+		return "Nothing to repair"
+	if int(CampState.get_value("res.materials", 0)) < cost:
+		return "Not enough materials (need %d)" % cost
+	_request_resource("res.materials", -cost, "repair")
+	var buildings: Array = CampState.get_copy("buildings", [])
+	for record: Dictionary in buildings:
+		if record["id"] == building_id:
+			record["health"] = 1.0
+	CampState.set_value("buildings", buildings)
+	EventBus.emit_event(&"building_repaired", {"building_id": building_id, "cost": cost})
+	return ""
+
+
+## Buildings below full health.
+func damaged_count() -> int:
+	return CampState.get_value("buildings", []).filter(func(r: Dictionary) -> bool: return r["health"] < 1.0).size()
 
 
 ## Damage a building by `amount` (0..1 of its health). Destroyed at 0. Authority only.
@@ -195,3 +233,8 @@ func _on_placement_requested(payload: Dictionary) -> void:
 func _on_demolish_requested(payload: Dictionary) -> void:
 	if CampState.is_authority():
 		demolish(payload.get("building_id", -1))
+
+
+func _on_repair_requested(payload: Dictionary) -> void:
+	if CampState.is_authority():
+		repair(payload.get("building_id", -1))
